@@ -114,7 +114,10 @@ module.exports = configure(function (/* ctx */) {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: [
+        'Dark',
+        'Notify'
+      ]
     },
 
     // animations: 'all', // --- includes all animations
@@ -210,6 +213,9 @@ module.exports = configure(function (/* ctx */) {
               arch: ['x64', 'arm64']
             }
           ]
+        },
+        nsis: {
+          deleteAppDataOnUninstall: true
         },
         mac: {
           icon: 'src-electron/icons/icon.icns',

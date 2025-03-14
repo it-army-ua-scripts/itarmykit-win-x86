@@ -7,7 +7,8 @@ import fetch from 'electron-fetch'
 import decompress from 'decompress'
 import { v4 as uuid4 } from 'uuid'
 import { Settings } from '../../src-electron/handlers/settings'
-
+import { getCPUArchitecture } from './archLib'
+import { ca } from 'app/dist/electron/UnPackaged/assets/index.3949846e'
 
 export type ModuleName = 'DB1000N' | 'DISTRESS' | 'MHDDOS_PROXY'
 
@@ -116,6 +117,8 @@ export abstract class Module<ConfigType extends BaseConfig> {
     private _config?: ConfigType
     protected abstract get defaultConfig(): ConfigType
 
+    private autoupdateInterval?: NodeJS.Timeout
+
     protected async getInstallationDirectory () {
       const settingsData = await this.settings.getData()  
       return path.join(settingsData.modules.dataPath, this.name)
@@ -144,6 +147,22 @@ export abstract class Module<ConfigType extends BaseConfig> {
       await fs.promises.rmdir(path.join(installDirectory, versionTag), { recursive: true })
     }
 
+    public async installLatestVersion (): Promise<boolean> {
+      const versions = await this.getAllVersions()
+      if (versions.length > 0 && !versions[0].installed) {
+        const progressGenerator = this.installVersion(versions[0].tag)
+        for await (const progress of progressGenerator) {
+          if (progress.stage === 'DONE') {
+            const config = await this.getConfig()
+            config.selectedVersion = versions[0].tag
+            await this.setConfig(config)
+            return true
+          }
+        }
+      }
+      return false
+    }
+
     protected async *installVersionFromGithub (owner: string, repo: string, tag: string, assetMapping: Array<{ name: string, arch: 'x64' | 'arm64' | 'ia32', platform: 'linux' | 'win32' | 'darwin' }>): AsyncGenerator<InstallProgress, void, void> {
         interface GithubRelease {
             assets: Array<{ name: string, browser_download_url: string }>
@@ -164,9 +183,9 @@ export abstract class Module<ConfigType extends BaseConfig> {
           return
         }
 
-        const assetName = assetMapping.find((asset) => asset.platform === process.platform && asset.arch === process.arch)?.name
+        const assetName = assetMapping.find((asset) => asset.platform === process.platform && asset.arch === getCPUArchitecture())?.name
         if (assetName === undefined) {
-          yield { stage: 'FAILED', progress: 0, errorCode: InstallationErrorCodes.UNSUPPORTED_PLATFORM, errorMessage: `Tour architecture is "${process.arch}" and platform "${process.platform}" which is not supported.` }
+          yield { stage: 'FAILED', progress: 0, errorCode: InstallationErrorCodes.UNSUPPORTED_PLATFORM, errorMessage: `Tour architecture is "${getCPUArchitecture()}" and platform "${process.platform}" which is not supported.` }
           return
         }
 
@@ -223,7 +242,9 @@ export abstract class Module<ConfigType extends BaseConfig> {
         if (response.status !== 200) {
           throw new Error(`Cant fetch github releases: ${await response.text()}`)
         }
-        this.githubReleaseCache = await response.json() as Array<{ tag_name: string, name: string, body: string }>
+        let newReleasesList = await response.json() as Array<{ tag_name: string, name: string, body: string, prerelease: boolean, draft: boolean }>
+        newReleasesList = newReleasesList.filter((release) => !release.prerelease && !release.draft)
+        this.githubReleaseCache = newReleasesList
         this.githubReleaseCacheTime = new Date()
       }
 
@@ -342,8 +363,22 @@ export abstract class Module<ConfigType extends BaseConfig> {
       return data.toString()
     }
     protected async startExecutable (executableName: string, args: string[]): Promise<ChildProcessWithoutNullStreams> {
+      let config = await this.getConfig()
+      if (config.autoUpdate) {
+        await this.installLatestVersion()
+        config = await this.getConfig()
+      }
+
+      this.autoupdateInterval = setInterval(async () => {
+        const updateConfig = await this.getConfig()
+        if (updateConfig.autoUpdate && await this.installLatestVersion() && this.isRunning) {
+          await this.stop()
+          await this.start()
+        }
+      }, 1000 * 60 * 30) // Try to autoupdate once in 30 minutes
+
       const installDirectory = await this.getInstallationDirectory()
-      const config = await this.getConfig()
+
       if (config.selectedVersion === undefined) {
         const error = new Error('Failed to start executable. No version selected')
         this.emit('execution:error', { type: 'execution:error', error })
@@ -377,6 +412,9 @@ export abstract class Module<ConfigType extends BaseConfig> {
     }
 
     protected async stopExecutable (): Promise<void> {
+      clearInterval(this.autoupdateInterval)
+      this.autoupdateInterval = undefined
+
       const handler = this.executedProcessHandler // Copy handler, because other async task can chenage it in the meantime
 
       await new Promise<void>((resolve, reject) => {

@@ -1,14 +1,19 @@
 import { Module, Version, InstallProgress, InstallationTarget, BaseConfig, ModuleName } from './module'
+import { getCPUArchitecture } from './archLib'
 
 export interface Config extends BaseConfig {
-  // Enable UDP flood or not
-  directUDPFailover: boolean;
+  // Disable UDP flood or not
+  DisableUDPFlood: boolean;
+  // Enable ICMP flood or not
+  EnableICMPFlood: boolean;
+  // Enable PACKET flood or not
+  EnablePACKETFlood: boolean;
   // Number of concurrent tasks
   concurrency: number;
   // Number of Tor connections
-  useTor: number
+  useTor: number;
   // Percentage of own IP usage
-  useMyIP: number
+  useMyIP: number;
 }
 
 export class Distress extends Module<Config> {
@@ -29,8 +34,10 @@ export class Distress extends Module<Config> {
     return {
       autoUpdate: true,
       executableArguments: [],
-      concurrency: 1024,
-      directUDPFailover: false,
+      concurrency: 4096,
+      DisableUDPFlood: false,
+      EnableICMPFlood: false,
+      EnablePACKETFlood: false,
       useMyIP: 0,
       useTor: 0
     }
@@ -71,10 +78,9 @@ export class Distress extends Module<Config> {
     if (settings.itarmy.uuid !== '') {
       args.push('--user-id', settings.itarmy.uuid)
     }
-    args.push('--disable-auto-update', '--json-logs')
-    args.push('--concurrency', config.concurrency.toString())
-    if (config.directUDPFailover) {
-      args.push('--direct-udp-failover', '1')
+    args.push('--child', '--json-logs')
+    if (config.concurrency > 0) {
+      args.push('--concurrency', config.concurrency.toString())
     }
     if (config.useTor > 0) {
       args.push('--use-tor', config.useTor.toString())
@@ -82,11 +88,21 @@ export class Distress extends Module<Config> {
     if (config.useMyIP > 0) {
       args.push('--use-my-ip', config.useMyIP.toString())
     }
+    if (config.useMyIP > 0 && config.DisableUDPFlood) {
+      args.push('--disable-udp-flood')
+    }
+    if (config.useMyIP > 0 && config.EnableICMPFlood) {
+      args.push('--enable-icmp-flood')
+    }
+    if (config.useMyIP > 0 && config.EnablePACKETFlood) {
+      args.push('--enable-packet-flood')
+    }
+    args.push('--source', "itarmykit")
     args.push(...config.executableArguments.filter(arg => arg !== ''))
 
     let filename = 'distress_x86_64-unknown-linux-musl'
     for (const asset of this.assetMapping) {
-      if (asset.arch === process.arch && asset.platform === process.platform) {
+      if (asset.arch === getCPUArchitecture() && asset.platform === process.platform) {
         filename = asset.name
         break
       }
@@ -123,17 +139,17 @@ export class Distress extends Module<Config> {
             value = value.toLowerCase()
             
             if (value.includes("kb")) {
-              return Number(value.split("kb")[0]) * 1024
+              return Number(value.split("kb")[0]) * 125
             } else if (value.includes("mb")) {
-              return Number(value.split("mb")[0]) * 1024 * 1024
+              return Number(value.split("mb")[0]) * 125 * 1024
             } else if (value.includes("gb")) {
-              return Number(value.split("gb")[0]) * 1024 * 1024 * 1024
+              return Number(value.split("gb")[0]) * 125 * 1024 * 1024
             } else if (value.includes("tb")) {
-              return Number(value.split("tb")[0]) * 1024 * 1024 * 1024 * 1024
+              return Number(value.split("tb")[0]) * 125 * 1024 * 1024 * 1024
             } else if (value.includes("pb")) {
-              return Number(value.split("pb")[0]) * 1024 * 1024 * 1024 * 1024 * 1024
+              return Number(value.split("pb")[0]) * 125 * 1024 * 1024 * 1024 * 1024
             } else if (value.includes("eb")) {
-              return Number(value.split("eb")[0]) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
+              return Number(value.split("eb")[0]) * 125 * 1024 * 1024 * 1024 * 1024 * 1024
             } else {
               return Number(value.split("b")[0])
             }

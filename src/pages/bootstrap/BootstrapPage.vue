@@ -43,7 +43,7 @@
             <q-stepper-navigation class="row">
             <q-btn @click="step = 1" color="primary" :label="$t('bootstrap.data.backButton')" class="q-mr-sm col-2" outline />
             <q-btn @click="finishDataStep" color="primary" :label="$t('bootstrap.data.continueButton')" class="col fit" outline />
-            
+
             </q-stepper-navigation>
         </q-step>
 
@@ -55,7 +55,8 @@
             :header-nav="step > 3"
         >
             <div class="q-mb-md">{{ $t('bootstrap.itarmy.body') }}</div>
-            <q-input :label="$t('bootstrap.itarmy.uuidInputTitle')" outlined v-model="itArmyUUID" @update:model-value="setItArmyUUID" :debounce="500" />
+            <div class="q-mb-md">{{ $t('settings.idDescription') }} <a href="https://itarmy.com.ua/statistics/" target="_blank" rel="noopener noreferrer">https://itarmy.com.ua</a></div>
+            <q-input :label="$t('bootstrap.itarmy.uuidInputTitle')" outlined v-model="itArmyUUID" @update:model-value="setItArmyUUID" :debounce="500" type="number"/>
 
             <q-stepper-navigation class="row">
                 <q-btn @click="step = 2" color="primary" :label="$t('bootstrap.itarmy.backButton')" class="q-mr-sm col-2" outline />
@@ -83,20 +84,29 @@
                 </q-item>
                 <q-item tag="label" v-ripple>
                     <q-item-section avatar>
-                    <q-radio v-model="presetToInstall" :val="Preset.NORMAL" color="yellow-7" />
-                    </q-item-section>
-                    <q-item-section>
-                    <q-item-label>{{ $t('bootstrap.module.preset.normal.title') }}</q-item-label>
-                    <q-item-label caption>{{ $t('bootstrap.module.preset.normal.description') }}</q-item-label>
-                    </q-item-section>
-                </q-item>
-                <q-item tag="label" v-ripple>
-                    <q-item-section avatar>
                     <q-radio v-model="presetToInstall" :val="Preset.LAPTOP" color="yellow-7" />
                     </q-item-section>
                     <q-item-section>
                     <q-item-label>{{ $t('bootstrap.module.preset.laptop.title') }}</q-item-label>
                     <q-item-label caption>{{ $t('bootstrap.module.preset.laptop.description') }}</q-item-label>
+                    </q-item-section>
+                </q-item>
+                <q-item tag="label" v-ripple>
+                    <q-item-section avatar>
+                    <q-radio v-model="presetToInstall" :val="Preset.COMFORT" color="yellow-7" />
+                    </q-item-section>
+                    <q-item-section>
+                    <q-item-label>{{ $t('bootstrap.module.preset.comfort.title') }}</q-item-label>
+                    <q-item-label caption>{{ $t('bootstrap.module.preset.comfort.description') }}</q-item-label>
+                    </q-item-section>
+                </q-item>
+                <q-item tag="label" v-ripple>
+                    <q-item-section avatar>
+                    <q-radio v-model="presetToInstall" :val="Preset.NORMAL" color="yellow-7" />
+                    </q-item-section>
+                    <q-item-section>
+                    <q-item-label>{{ $t('bootstrap.module.preset.normal.title') }}</q-item-label>
+                    <q-item-label caption>{{ $t('bootstrap.module.preset.normal.description') }}</q-item-label>
                     </q-item-section>
                 </q-item>
                 <q-item tag="label" v-ripple>
@@ -124,13 +134,17 @@
             </q-stepper-navigation>
         </q-step>
         </q-stepper>
-    
+
     <q-dialog v-model="moduleInstallationDialog">
         <ModuleInstallationComponent
             @error="moduleInstallationError"
             @configured="moduleInstalledSuccessfully"
             :preset-name="presetToInstall ? presetToInstall : Preset.NORMAL"
         />
+    </q-dialog>
+
+    <q-dialog v-model="doneDialog" persistent>
+        <BoostrapDoneDialog />
     </q-dialog>
     </div>
 </template>
@@ -144,9 +158,12 @@ import { Preset } from './moduleConfig';
 import ModuleInstallationComponent from './ModuleInstallationComponent.vue';
 import { useQuasar } from 'quasar';
 
+import BoostrapDoneDialog from './BoostrapDoneDialog.vue';
+
 const step = ref(1);
 const router = useRouter();
 const quasar = useQuasar();
+const doneDialog = ref(false);
 
 const dataFolder = ref("")
 
@@ -184,7 +201,7 @@ const moduleInstallationDialog = ref(false)
 async function finishModuleStep() {
     if (presetToInstall.value === null) {
         await window.settingsAPI.bootstrap.setStep("DONE")
-        await router.push({ name: "dashboard" })
+        await router.push({ name: "dashboard" }) //For expert mode will will not show notification that he need to wait several minutes, because he must do everything by himselve.
     } else {
         moduleInstallationDialog.value = true
     }
@@ -200,7 +217,7 @@ async function moduleInstallationError(error: string) {
 async function moduleInstalledSuccessfully() {
     moduleInstallationDialog.value = false
     await window.settingsAPI.bootstrap.setStep("DONE")
-    await router.push({ name: "dashboard" })
+    doneDialog.value = true
 }
 
 async function loadSettings() {

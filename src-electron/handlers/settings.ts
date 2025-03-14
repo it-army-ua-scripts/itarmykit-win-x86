@@ -2,6 +2,7 @@ import { join as joinPath }from 'path'
 import { app, ipcMain } from 'electron'
 import { promises as fsPromises, readFileSync, existsSync } from 'fs'
 import EventEmitter from 'events';
+import { SID } from 'app/lib/activeness/api';
 
 export interface SettingsData {
     system: {
@@ -20,11 +21,20 @@ export interface SettingsData {
         activity: 'DO_NOTHING' | 'MINIMAL'
     },
     itarmy: {
-        uuid: string
+        uuid: string,
+        apiKey: string
     },
     bootstrap: {
         step: 'LANGUAGE' | 'DATA_FOLDER' | 'MODULES_CONFIGURATION' | 'ITARMY_UUID' | 'DONE'
         selectedModulesConfig: 'NONE' | 'GOVERNMENT_AGENCY' | 'WORK' | 'HOME'
+    },
+    gui: {
+        darkMode: boolean
+        matrixMode: boolean
+        matrixModeUnlocked: boolean
+    },
+    activeness: {
+        sid?: SID
     }
 }
 
@@ -49,12 +59,19 @@ export class Settings {
             activity: 'DO_NOTHING'
         },
         itarmy: {
-            uuid: ''
+            uuid: '',
+            apiKey: ''
         },
         bootstrap: {
             step: 'LANGUAGE',
             selectedModulesConfig: 'NONE'
-        }
+        },
+        gui: {
+            darkMode: false,
+            matrixMode: false,
+            matrixModeUnlocked: false
+        },
+        activeness: {}
     }
     private loaded = false
     private settingsChangedEmiter = new EventEmitter()
@@ -85,28 +102,46 @@ export class Settings {
         await fsPromises.writeFile(Settings.settingsFile, JSON.stringify(this.data))
     }
 
+    private applyLoadBackwardsCompatibility() {
+        if (this.data.itarmy === undefined) {
+            this.data.itarmy = {
+                uuid: '',
+                apiKey: ''
+            }
+        }
+
+        if (this.data.itarmy.apiKey === undefined) {
+            this.data.itarmy.apiKey = ''
+        }
+
+        if (this.data.system.language === undefined) {
+            this.data.system.language = 'en-US'
+        }
+
+        if (this.data.bootstrap === undefined) {
+            this.data.bootstrap = {
+                step: 'DONE',
+                selectedModulesConfig: 'NONE'
+            }
+        }
+
+        if (this.data.gui === undefined) {
+            this.data.gui = {
+                darkMode: false,
+                matrixMode: false,
+                matrixModeUnlocked: false
+            }
+        }
+
+        if (this.data.activeness === undefined) {
+            this.data.activeness = {}
+        }
+    }
+
     async load() {
         try {
             this.data = JSON.parse(await fsPromises.readFile(Settings.settingsFile, 'utf-8'))
-            
-            // Backwards compatibility
-
-            if (this.data.itarmy === undefined) {
-                this.data.itarmy = {
-                    uuid: ''
-                }
-            }
-
-            if (this.data.system.language === undefined) {
-                this.data.system.language = 'en-US'
-            }
-
-            if (this.data.bootstrap === undefined) {
-                this.data.bootstrap = {
-                    step: 'DONE',
-                    selectedModulesConfig: 'NONE'
-                }
-            }
+            this.applyLoadBackwardsCompatibility()
         } catch (e) {
             await this.save()
         }
@@ -116,6 +151,7 @@ export class Settings {
     loadSync() {
         try {
             this.data = JSON.parse(readFileSync(Settings.settingsFile, 'utf-8'))
+            this.applyLoadBackwardsCompatibility()
         } catch (e) {
             void this.save()
         }
@@ -219,6 +255,16 @@ export class Settings {
         this.settingsChangedEmiter.emit('settingsChanged', this.data)
     }
 
+    async setItArmyApiKey(data: SettingsData['itarmy']['apiKey']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.itarmy.apiKey = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
     async setBootstrapStep(data: SettingsData['bootstrap']['step']) {
         if (!this.loaded) {
             await this.load()
@@ -235,6 +281,50 @@ export class Settings {
         }
 
         this.data.bootstrap.selectedModulesConfig = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setGuiDarkMode(data: SettingsData['gui']['darkMode']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.gui.darkMode = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setGuiMatrixMode(data: SettingsData['gui']['matrixMode']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.gui.matrixMode = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setGuiMatrixModeUnlocked(data: SettingsData['gui']['matrixModeUnlocked']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.gui.matrixModeUnlocked = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setActivenessSID(data: SettingsData['activeness']['sid']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        if (data === undefined) {
+            delete this.data.activeness.sid
+        } else {
+            this.data.activeness.sid = data
+        }
         await this.save()
         this.settingsChangedEmiter.emit('settingsChanged', this.data)
     }
@@ -290,11 +380,27 @@ export function handleSettings(settings: Settings) {
         await settings.setItArmyUUID(data)
     })
 
+    ipcMain.handle('settings:itarmy:apiKey', async (_e, data: SettingsData['itarmy']['apiKey']) => {
+        await settings.setItArmyApiKey(data)
+    })
+
     ipcMain.handle('settings:bootstrap:step', async (_e, data: SettingsData['bootstrap']['step']) => {
         await settings.setBootstrapStep(data)
     })
 
     ipcMain.handle('settings:bootstrap:selectedModulesConfig', async (_e, data: SettingsData['bootstrap']['selectedModulesConfig']) => {
         await settings.setBootstrapSelectedModulesConfig(data)
+    })
+
+    ipcMain.handle('settings:gui:darkMode', async (_e, data: SettingsData['gui']['darkMode']) => {
+        await settings.setGuiDarkMode(data)
+    })
+
+    ipcMain.handle('settings:gui:matrixMode', async (_e, data: SettingsData['gui']['matrixMode']) => {
+        await settings.setGuiMatrixMode(data)
+    })
+
+    ipcMain.handle('settings:gui:matrixModeUnlocked', async (_e, data: SettingsData['gui']['matrixModeUnlocked']) => {
+        await settings.setGuiMatrixModeUnlocked(data)
     })
 }

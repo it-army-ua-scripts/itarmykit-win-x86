@@ -8,6 +8,9 @@ import { handleUpdater } from './updater'
 import { Settings, handleSettings } from './settings'
 import { handleDevelopers } from './developers'
 import { handleTray } from './tray'
+import { handleActiveness } from './activeness'
+import { handleItArmy } from './itarmy'
+import { handleHelpers } from './helpers'
 import { BrowserWindow } from 'electron'
 
 export function handle (mainWindow: BrowserWindow) {
@@ -20,10 +23,14 @@ export function handle (mainWindow: BrowserWindow) {
   ]
 
   handleModules(modules)
-  handleExecutionEngine(modules)
+  const engine = handleExecutionEngine(modules)
   handleTop()
-  handleUpdater(settings)
+  handleUpdater(settings, engine)
   handleTray(settings, mainWindow)
   handleSettings(settings)
   handleDevelopers()
+  handleActiveness(settings)
+  handleItArmy(settings)
+
+  handleHelpers()
 }

@@ -10,7 +10,7 @@ export interface Config extends BaseConfig {
     // Path to the file with proxies. can be on internet
     proxylist: string;
     // Deefault proxy protocol to use
-    defaultProxyProto: 'http' | 'socks4' | 'socks5' | null;
+    defaultProxyProto: 'socks4' | 'socks5' | null;
 }
 
 export class DB1000N extends Module<Config> {
@@ -70,16 +70,19 @@ export class DB1000N extends Module<Config> {
 
     args.push('--log-format', 'json')
     args.push('--scale', config.scale.toString())
-    args.push('--min-interval', config.minInterval.toString() + "ms")
+    if (config.minInterval > 0) {
+      args.push('--min-interval', config.minInterval.toString() + "ms")
+    }
     if (config.enablePrimitive) {
       args.push('--enable-primitive')
     }
     if (config.proxylist !== '') {
       args.push('--proxylist', config.proxylist)
     }
-    if (config.defaultProxyProto !== null) {
+    if (config.proxylist !== '' && config.defaultProxyProto !== null) {
       args.push('--default-proxy-proto', config.defaultProxyProto)
     }
+    args.push('--source', "itarmykit")
     args.push(...config.executableArguments.filter(arg => arg !== ''))
 
     const executableName = process.platform === 'win32' ? 'db1000n.exe' : 'db1000n'
@@ -115,6 +118,13 @@ export class DB1000N extends Module<Config> {
           } else {
             const now = new Date()
             const timeDiff = (now.getTime() - lastStatisticsEvent.getTime()) / 1000.0
+
+            // Bugfix [https://github.com/opengs/itarmykit/issues/19]. When PC goes to sleep mode, timediff is huge and not relevant
+            if (timeDiff > 60) {
+              lastStatisticsEvent = new Date()
+              continue
+            }
+
             if (timeDiff > 0) {
               currentSendBitrate = bytesSend * 1.0 / timeDiff
             }

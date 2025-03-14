@@ -4,7 +4,7 @@
             <MenuComponent />
         </div>
         <div class="col q-pl-lg">
-            <div class="row text-h5 text-bold text-grey-10">MHDDOS PROXY</div>
+            <div class="row text-h5 text-bold">MHDDOS PROXY</div>
             <q-separator />
             <div class="row col q-pt-sm">
                 <div class="col-12 q-pt-xs"><span class="text-subtitle2">Author: <a class="text-primary cursor-pointer" href="https://github.com/porthole-ascend-cinnamon" target="_blank">porthole-ascend-cinnamon</a></span></div>
@@ -15,46 +15,47 @@
                 <div class="col-12 q-pt-xs"><span class="text-subtitle2">Author readme: </span> Own proxy database creates the attack from the whole world, which makes it much more difficult to protect against.</div>    
             </div>
 
-            <div class="row text-h5 text-bold text-grey-10 q-mt-lg">Configuration</div>
+            <div class="row text-h5 text-bold q-mt-lg">{{ $t('modules.available.configuration') }}</div>
             <q-separator />
             <div class="row q-pt-md">
-                <div class="col text-subtitle1">Selected version</div>
+                <div class="col text-subtitle1">{{ $t('modules.available.selVersion') }}</div>
                 <q-select outlined v-model="configSelectedVersion" type="number" dense class="col-4" :options="installedVersions" @update:model-value="setConfigDebouced"/>
-                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">Version of the module to run</div>
+                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">{{ $t('modules.available.selVersionDescription') }}</div>
             </div>
             <q-item class="row q-pa-none q-pt-sm">
                 <q-item-section>
-                <q-item-label>Automatic updates</q-item-label>
-                <q-item-label caption>Automatically update module to the newest version</q-item-label>
+                <q-item-label>{{ $t('modules.available.autoupdates') }}</q-item-label>
+                <q-item-label caption>{{ $t('modules.available.autoupdatesDescription') }}</q-item-label>
                 </q-item-section>
                 <q-item-section side top>
                 <q-toggle color="primary" v-model="configAutoUpdate" @update:model-value="setConfigDebouced"/>
                 </q-item-section>
             </q-item>
             <div class="row q-pt-sm">
-                <div class="col text-subtitle1">Copies</div>
-                <q-slider v-model="configCopies" :min="0" :max="64" :step="1" label color="primary" class="col-8 q-pr-md" @update:model-value="setConfigDebouced"/>
+                <div class="col text-subtitle1">{{ $t('modules.mhddosProxy.copies') }}</div>
+                <q-slider v-model="configCopies" :min="0" :max="64" :step="1" label color="primary" class="col-7 q-pr-md" @update:model-value="setConfigDebouced"/>
                 <q-input outlined v-model="configCopies" type="number" dense class="col-2" @update:model-value="setConfigDebouced"/>
-                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">Number of started processes (copies of the module). 0 to auto</div>
+                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">{{ $t('modules.mhddosProxy.copiesDescription') }}</div>
             </div>
             <div class="row q-pt-sm">
-                <div class="col text-subtitle1">Threads</div>
-                <q-slider v-model="configThreads" :min="1024" :max="32768" :step="1024" label color="primary" class="col-8 q-pr-md" @update:model-value="setConfigDebouced"/>
+                <div class="col text-subtitle1">{{ $t('modules.mhddosProxy.threads') }}</div>
+                <q-slider v-model="configThreads" :min="0" :max="65534" :step="64" label color="primary" class="col-7 q-pr-md" @update:model-value="setConfigDebouced"/>
                 <q-input outlined v-model="configThreads" type="number" dense class="col-2" @update:model-value="setConfigDebouced"/>
-                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">Number of threads runned per process. 0 to auto</div>
+                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">{{ $t('modules.mhddosProxy.threadsDescription') }}</div>
             </div>
             <div class="row q-pt-sm">
-                <div class="col text-subtitle1">Use my IP</div>
-                <q-slider v-model="configVPNPercents" :min="0" :max="100" :step="1" label color="primary" class="col-8 q-pr-md" @update:model-value="setConfigDebouced"/>
-                <q-input outlined v-model="configVPNPercents" type="number" dense class="col-2" @update:model-value="setConfigDebouced"/>
-                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">Percentage of own IP address usage or VPN if configured</div>
+                <div class="col text-subtitle1">{{ $t('modules.mhddosProxy.useMyIp') }}</div>
+                <q-slider v-model="configUseMyIP" :min="0" :max="100" :step="1" label color="primary" class="col-7 q-pr-md" @update:model-value="setConfigDebouced"/>
+                <q-input outlined v-model="configUseMyIP" type="number" dense class="col-2" @update:model-value="setConfigDebouced"/>
+                <div class="col-12 text-caption text-grey-8" style="margin-top: -15px;">{{ $t('modules.mhddosProxy.useMyIpDescription') }}</div>
             </div>
             <div class="row q-pt-sm">
-                <div class="col-12 text-subtitle1">Executable arguments (only for advanced users)</div>
-                <q-input outlined v-model="configExecutableArguments" dense class="col-12" hint="Additional executable arguments that will be used when starting binary" :prefix="configExecutableArgumentsPrefix" @update:model-value="setConfigDebouced"/>
+                <div class="col-12 text-subtitle1">{{ $t('modules.available.arguments') }}</div>
+                <q-input outlined v-model="configExecutableArguments" dense class="col-12" hint="" :prefix="configExecutableArgumentsPrefix" @update:model-value="setConfigDebouced"/>
+                <div class="text-caption text-grey-8" style="margin-top: -15px;">{{ $t('modules.available.argumentsDescription') }}</div>
             </div>
 
-            <div class="row text-h5 text-bold text-grey-10 q-mt-lg">Versions</div>
+            <div class="row text-h5 text-bold q-mt-lg">{{ $t('modules.available.versions.versions') }}</div>
             <q-separator/>
             <VersionsListComponent
                 module-name="MHDDOS_PROXY"
@@ -77,10 +78,10 @@ const configSelectedVersion = ref(null as string | null)
 const configAutoUpdate = ref(true)
 const configCopies = ref(1)
 const configThreads = ref(8)
-const configVPNPercents = ref(0)
+const configUseMyIP = ref(0)
 const configExecutableArguments = ref("")
 const configExecutableArgumentsPrefix = computed(() => {
-    return `--no-updates` + (configVPNPercents.value > 0 ? ` --vpn true --vpn-percents ${configVPNPercents.value}` : "") + (configCopies.value > 0 ? ` --copies ${configCopies.value}` : "") + (configThreads.value > 0 ? ` --threads ${configThreads.value}` : "")
+    return `--no-updates` + (configUseMyIP.value != 0 ? ` --use-my-ip ${configUseMyIP.value}` : "") + (configCopies.value > 0 ? ` --copies ${configCopies.value}` : "") + (configThreads.value > 0 ? ` --threads ${configThreads.value}` : "")
 })
 
 const installedVersions = ref([] as string[])
@@ -91,7 +92,7 @@ async function loadConfig() {
     configAutoUpdate.value = config.autoUpdate
     configCopies.value = Number(config.copies)
     configThreads.value = Number(config.threads)
-    configVPNPercents.value = Number(config.vpnPercents)
+    configUseMyIP.value = Number(config.useMyIP)
     configExecutableArguments.value = config.executableArguments.join(" ")
 }
 
@@ -103,7 +104,7 @@ async function setConfig() {
         copies: Number(configCopies.value),
         threads: Number(configThreads.value),
         executableArguments: configExecutableArguments.value.split(" "),
-        vpnPercents: Number(configVPNPercents.value),
+        useMyIP: Number(configUseMyIP.value),
     } as Config
 
     await window.modulesAPI.setConfig<Config>('MHDDOS_PROXY', config)

@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import { WebContents, app, ipcMain } from 'electron'
+import { Mutex } from 'async-mutex'
+
 
 import { Distress } from "app/lib/module/distress";
 import { DB1000N } from "app/lib/module/db1000n";
@@ -14,6 +16,10 @@ export interface ExecutionLogEntry {
     message: string
 }
 
+export interface StatisticsTotals {
+    totalBytesSent: number
+}
+
 export interface State {
     moduleToRun?: ModuleName
     run: boolean
@@ -22,6 +28,7 @@ export interface State {
     stdOut: Array<string>
     stdErr: Array<string>
     statistics: Array<ModuleExecutionStatisticsEventData>
+    statisticsTotals: StatisticsTotals
 }
 
 
@@ -32,41 +39,51 @@ export class ExecutionEngine {
     private modules: Array<Distress | DB1000N | MHDDOSProxy> = []
     private runningModule: Distress | DB1000N | MHDDOSProxy | null
     private state?: State
+    private stateLock: Mutex = new Mutex()
 
     private async appendToExecutionLog(entry: ExecutionLogEntry) {
-        const state = await this.getState()
-        state.executionLog.push(entry)
-        if (state.executionLog.length > 100) {
-            state.executionLog.shift()
-        }
-        await this.setState(state)
+        await this.stateLock.runExclusive(async () => {
+            const state = await this.getState()
+            state.executionLog.push(entry)
+            if (state.executionLog.length > 100) {
+                state.executionLog.shift()
+            }
+            await this.setState(state)
+        })
     }
 
     private async appendToStdOut(data: string) {
-        const state = await this.getState()
-        state.stdOut.push(data)
-        if (state.stdOut.length > 100) {
-            state.stdOut.shift()
-        }
-        await this.setState(state)
+        await this.stateLock.runExclusive(async () => {
+            const state = await this.getState()
+            state.stdOut.push(data)
+            if (state.stdOut.length > 100) {
+                state.stdOut.shift()
+            }
+            await this.setState(state)
+        })
     }
 
     private async appendToStdErr(data: string) {
-        const state = await this.getState()
-        state.stdErr.push(data)
-        if (state.stdErr.length > 100) {
-            state.stdErr.shift()
-        }
-        await this.setState(state)
+        await this.stateLock.runExclusive(async () => {
+            const state = await this.getState()
+            state.stdErr.push(data)
+            if (state.stdErr.length > 100) {
+                state.stdErr.shift()
+            }
+            await this.setState(state)
+        })
     }
 
     private async appendToStatistics(data: ModuleExecutionStatisticsEventData) {
-        const state = await this.getState()
-        state.statistics.push(data)
-        if (state.statistics.length > 100) {
-            state.statistics.shift()
-        }
-        await this.setState(state)
+        await this.stateLock.runExclusive(async () => {
+            const state = await this.getState()
+            state.statistics.push(data)
+            if (state.statistics.length > 100) {
+                state.statistics.shift()
+            }
+            state.statisticsTotals.totalBytesSent += data.bytesSend
+            await this.setState(state)
+        })
     }
 
     constructor(modules: Array<Distress | DB1000N | MHDDOSProxy>) {
@@ -177,17 +194,29 @@ export class ExecutionEngine {
         }
     }
 
+    public async setModuleToRun(module?: ModuleName) {
+        await this.stateLock.runExclusive(async () => {
+            const config = await this.getState()
+            config.moduleToRun = module
+            await this.setState(config)
+        })
+    }
+
     public async startModule() {
         if (this.runningModule != null) {
             throw new Error(`Module ${this.runningModule.name} is already running`)
         }
         
-        const config = await this.getState()
-        const moduleName = config.moduleToRun
-        config.run = true
-        config.stdOut = []
-        config.stdErr = []
-        await this.setState(config)
+        let moduleName = undefined as ModuleName | undefined
+
+        await this.stateLock.runExclusive(async () => {
+            const config = await this.getState()
+            moduleName = config.moduleToRun
+            config.run = true
+            config.stdOut = []
+            config.stdErr = []
+            await this.setState(config)
+        })
 
         const module = this.modules.find(m => m.name === moduleName)
         if (!module) {
@@ -203,9 +232,11 @@ export class ExecutionEngine {
             await this.runningModule.stop()
             this.runningModule = null
 
-            const config = await this.getState()
-            config.run = false
-            await this.setState(config)
+            await this.stateLock.runExclusive(async () => {
+                const config = await this.getState()
+                config.run = false
+                await this.setState(config)
+            })
         }
     }
 
@@ -222,15 +253,20 @@ export class ExecutionEngine {
                 const configString = await fs.promises.readFile(ExecutionEngine.stateFilePath, 'utf8')
                 this.state = JSON.parse(configString) as State
             } catch {
-                this.state = { run: false, executionLog: [] ,statistics: [], stdErr: [], stdOut: [] } // To enable TS types
-                this.setState(this.state)
+                this.state = { run: false, executionLog: [] ,statistics: [], stdErr: [], stdOut: [], statisticsTotals: { totalBytesSent: 0 } } // To enable TS types
+                await this.setState(this.state)
             }
+        }
+
+        // Backwards compatibility for v1.0.8
+        if (this.state.statisticsTotals === undefined) {
+            this.state.statisticsTotals = { totalBytesSent: 0 }
         }
 
         return this.state
     }
 
-    public async setState(config: State) {
+    private async setState(config: State) {
         this.state = config
         await fs.promises.mkdir(path.dirname(ExecutionEngine.stateFilePath), { recursive: true })
         await fs.promises.writeFile(ExecutionEngine.stateFilePath, JSON.stringify(config))
@@ -279,9 +315,16 @@ export class ExecutionEngine {
             this.statisticsListeners.splice(index, 1)
         }
     }
+
+    public async deleteStatistics() {
+        const config = await this.getState()
+        config.statistics = []
+        config.statisticsTotals.totalBytesSent = 0
+        await this.setState(config)
+    }
 }
 
-export function handleExecutionEngine(modules: Array<Distress | DB1000N | MHDDOSProxy>) {
+export function handleExecutionEngine(modules: Array<Distress | DB1000N | MHDDOSProxy>): ExecutionEngine {
     const engine = new ExecutionEngine(modules)
 
     app.on('before-quit', async () => {
@@ -301,9 +344,7 @@ export function handleExecutionEngine(modules: Array<Distress | DB1000N | MHDDOS
     })
 
     ipcMain.handle('executionEngine:setModuleToRun', async (_e, module?: ModuleName) => {
-        const state = await engine.getState()
-        state.moduleToRun = module
-        await engine.setState(state)
+        await engine.setModuleToRun(module)
     })
 
     ipcMain.handle('executionEngine:listenForExecutionLog', async (e) => {
@@ -333,6 +374,12 @@ export function handleExecutionEngine(modules: Array<Distress | DB1000N | MHDDOS
     ipcMain.handle('executionEngine:stopListeningForStatistics', async (e) => {
         engine.stopListeningForStatistics(e.sender)
     })
+    ipcMain.handle('executionEngine:deleteStatistics', async () => {
+        await engine.deleteStatistics()
+    })
+
 
     void engine.init()
+
+    return engine
 }

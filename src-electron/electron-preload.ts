@@ -123,6 +123,9 @@ const executionEngineAPI = {
   async stopListeningForStatistics (callback: (_e: IpcRendererEvent, data: ModuleExecutionStatisticsEventData) => void): Promise<void> {
     await ipcRenderer.invoke('executionEngine:stopListeningForStatistics')
     ipcRenderer.off('executionEngine:statistics', callback)
+  },
+  async deleteStatistics (): Promise<void> {
+    return await ipcRenderer.invoke('executionEngine:deleteStatistics')
   }
 }
 
@@ -188,7 +191,10 @@ const settingsAPI = {
   itarmy: {
     async setUUID (data: SettingsData['itarmy']['uuid']): Promise<void> {
       return await ipcRenderer.invoke('settings:itarmy:uuid', data)
-    }
+    },
+    async setAPIKey (data: SettingsData['itarmy']['apiKey']): Promise<void> {
+      return await ipcRenderer.invoke('settings:itarmy:apiKey', data)
+    },
   },
   bootstrap: {
     async setStep (data: SettingsData['bootstrap']['step']): Promise<void> {
@@ -196,6 +202,17 @@ const settingsAPI = {
     },
     async setSelectedModulesConfig (data: SettingsData['bootstrap']['selectedModulesConfig']): Promise<void> {
       return await ipcRenderer.invoke('settings:bootstrap:selectedModulesConfig', data)
+    }
+  },
+  gui: {
+    async setDarkMode (data: SettingsData['gui']['darkMode']): Promise<void> {
+      return await ipcRenderer.invoke('settings:gui:darkMode', data)
+    },
+    async setMatrixMode (data: SettingsData['gui']['matrixMode']): Promise<void> {
+      return await ipcRenderer.invoke('settings:gui:matrixMode', data)
+    },
+    async setMatrixModeUnlocked (data: SettingsData['gui']['matrixModeUnlocked']): Promise<void> {
+      return await ipcRenderer.invoke('settings:gui:matrixModeUnlocked', data)
     }
   }
 }
@@ -217,3 +234,73 @@ const developersAPI = {
 }
 
 contextBridge.exposeInMainWorld('developersAPI', developersAPI)
+
+
+import { GetStatsResponse as GetActivenessStatsResponse, GetTasksListResponse as GetActivenessTasksListResponse, MakeTaskDoneResponse as MakeActivenessTaskDoneResponse, IgnoreTaskResponse as IgnoreActivenessTaskResponse } from '../lib/activeness/api'
+
+declare global {
+  interface Window {
+      activenessAPI: typeof activenessAPI
+  }
+}
+
+const activenessAPI = {
+  async isLoggedIn (): Promise<boolean> {
+    return await ipcRenderer.invoke('activeness:isLoggedIn')
+  },
+  async login (email: string, password: string): Promise<boolean> {
+    return await ipcRenderer.invoke('activeness:login', email, password)
+  },
+  async logout (): Promise<void> {
+    return await ipcRenderer.invoke('activeness:logout')
+  },
+  async getTasksList (): Promise<GetActivenessTasksListResponse> {
+    return await ipcRenderer.invoke('activeness:getTasksList')
+  },
+  async makeTaskDone (id: number): Promise<MakeActivenessTaskDoneResponse> {
+    return await ipcRenderer.invoke('activeness:makeTaskDone', id)
+  },
+  async ignoreTask (id: number): Promise<IgnoreActivenessTaskResponse> {
+    return await ipcRenderer.invoke('activeness:ignoreTask', id)
+  },
+  async getStats(): Promise<GetActivenessStatsResponse> {
+    return await ipcRenderer.invoke('activeness:getStats')
+  },
+  async getMyStats(): Promise<{ score: number }> {
+    return await ipcRenderer.invoke('activeness:getMyStats')
+  }
+}
+
+contextBridge.exposeInMainWorld('activenessAPI', activenessAPI)
+
+
+import { GetUserStatsResponse as GetITArmyUserStatsResponse } from '../lib/itarmy/api'
+
+declare global {
+  interface Window {
+      itArmyAPI: typeof itArmyAPI
+  }
+}
+
+const itArmyAPI = {
+  async getStats (): Promise<GetITArmyUserStatsResponse> {
+    return await ipcRenderer.invoke('itarmy:getStats')
+  },
+}
+
+contextBridge.exposeInMainWorld('itArmyAPI', itArmyAPI)
+
+
+declare global {
+  interface Window {
+      helpersAPI: typeof helpersAPI
+  }
+}
+
+const helpersAPI = {
+  async openURLInBrowser (url: string): Promise<void> {
+    await ipcRenderer.invoke('helpers:openURLInBrowser', url)
+  },
+}
+
+contextBridge.exposeInMainWorld('helpersAPI', helpersAPI)

@@ -114,7 +114,10 @@ module.exports = configure(function (/* ctx */) {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: [
+        'Dark',
+        'Notify'
+      ]
     },
 
     // animations: 'all', // --- includes all animations
@@ -211,9 +214,12 @@ module.exports = configure(function (/* ctx */) {
             }
           ]
         },
+        nsis: {
+          deleteAppDataOnUninstall: true
+        },
 
         artifactName: '${name}-${os}-${arch}.${ext}',
-        appId: 'uacybershield.itarmykit',
+        appId: 'uacybershield.itarmykitxp',
 
         publish: {
           provider: 'github',
