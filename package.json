@@ -1,16 +1,16 @@
 {
   "name": "itarmykit",
-  "version": "1.4.0",
-  "description": "IT Army Kit",
-  "productName": "IT Army Kit",
+  "version": "1.4.2",
+  "description": "ITArmyKit",
+  "productName": "ITArmyKit",
   "author": {
-    "name": "slamy",
-    "email": "unknown@unknown.com",
-    "url": "https://github.com/opengs"
+    "name": "it army dev",
+    "email": "armyuait@gmail.com",
+    "url": "https://github.com/it-army-ua-scripts"
   },
   "private": false,
   "license": "GPL-3.0",
-  "repository": "https://github.com/opengs/itarmykit",
+  "repository": "https://github.com/it-army-ua-scripts/itarmykit",
   "homepage": "https://itarmy.com.ua",
   "scripts": {
     "lint": "eslint --ext .js,.ts,.vue ./",
@@ -43,7 +43,7 @@
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "autoprefixer": "^10.4.2",
-    "electron": "^26.2.0",
+    "electron": "^32.0.2",
     "electron-builder": "^24.3.0",
     "electron-packager": "^17.1.1",
     "eslint": "^8.10.0",
