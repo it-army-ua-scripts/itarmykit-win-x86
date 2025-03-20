@@ -40,26 +40,6 @@ export default {
         selectUse: "Für Verwendung auswählen"
       }
     },
-    db1000n: {
-      scale: "Skalierung",
-      scaleDescription: "Wird verwendet, um die Anzahl der gestarteten Aufgaben zu skalieren, ähnlich wie bei der gleichzeitigen Ausführung mehrerer Instanzen",
-      interval: "Intervall",
-      intervalDescription: "Mindestintervall zwischen Aufgabendurchläufen",
-      primitive: "Primitiver Modus",
-      primitiveDescription: "Aktivieren, wenn Sie primitive Aufgaben ausführen möchten, die weniger ressourceneffizient sind",
-      proxiesList: "Proxy-Liste",
-      proxiesListDescription: "Adresse (im Dateisystem oder im Internet) zu der Datei mit den Proxy-Servern im Format 'protocol://ip:port' oder 'ip:port'",
-      proxyProtocol: "Proxy-Protokoll",
-      proxyProtocolDescription: "Zu verwendendes Protokoll, wenn nicht in der Proxy-Liste definiert"
-    },
-    mhddosProxy: {
-      copies: "Kopien",
-      copiesDescription: "Die Anzahl der gestarteten Prozesse (Modulkopien). 0 für Auto",
-      threads: "Threads",
-      threadsDescription: "Die Anzahl der gestarteten Threads pro Prozess. 0 für Auto",
-      useMyIp: "Meine IP benutzen",
-      useMyIpDescription: "Der Prozentanteil der Verwendung Ihrer eigenen IP-Adresse oder VPN, wenn konfiguriert"
-    },
     distress: {
       concurrency: "Nebenläufigkeit",
       concurrencyDescription: "Die Anzahl der Aufgabenersteller. 0 setzt Standardwert auf 4096 ",

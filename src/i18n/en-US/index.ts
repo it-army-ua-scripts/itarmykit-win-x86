@@ -40,26 +40,6 @@ export default {
         selectUse: "Select for Use"
       }
     },
-    db1000n: {
-      scale: "Scaling",
-      scaleDescription: "Used to scale the number of tasks launched, similar to running multiple instances simultaneously",
-      interval: "Interval",
-      intervalDescription: "Minimum interval between task iterations",
-      primitive: "Primitive Mode",
-      primitiveDescription: "Activate if you want to perform primitive tasks, which are less resource efficient",
-      proxiesList: "Proxy List",
-      proxiesListDescription: "Address (in the file system or on the Internet) to the file with proxy servers in the format 'protocol://ip:port' or 'ip:port'",
-      proxyProtocol: "Proxy Protocol",
-      proxyProtocolDescription: "Protocol to use if not defined in the proxy list"
-    },
-    mhddosProxy: {
-      copies: "Copies",
-      copiesDescription: "Number of processes (module copies) launched. 0 for auto",
-      threads: "Threads",
-      threadsDescription: "Number of threads launched per process. 0 for auto",
-      useMyIp: "Use My IP",
-      useMyIpDescription: "Percentage of using your own IP address or VPN, if configured"
-    },
     distress: {
       concurrency: "Concurrency",
       concurrencyDescription: "Number of task creators. 0 sets default to 4096",
@@ -89,6 +69,7 @@ export default {
         body: "Looks like you just tried to select Russian language. You need us to rescue you. Don't worry, we'll soon denazify and liberate you.",
         explanationHint: "I don't understand. Clarify this meme for me.",
         explanation: '"russian warship, go fuck yourself", was the final communication made on 24 February, the first day of the 2022 Snake Island campaign, by Ukrainian border guard Roman Hrybov to the russian missile cruiser moskva. On 13 April 2022, moskva was critically damaged by an explosion caused by Ukrainian anti-ship missiles and sank the following day. "People are like ships" is a well-known in Ukraine song by Skryabin band.Denazification and making Ukrainians free - are slogans of russian propaganda of "russian world" doctrine.',
+
         goodButton: "I'm silly. Please liberate me.",
         badButton: "I don't like Ukraine",
       },

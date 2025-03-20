@@ -40,26 +40,6 @@ export default {
         selectUse: "Вибрати для використання"
       }
     },
-    db1000n: {
-      scale: "Маштабування",
-      scaleDescription: "Використовується для масштабування кількості завдань, що запускаються, ефект подібний до запуску кількох екземплярів одночасно",
-      interval: "Інтервал",
-      intervalDescription: "Мінімальний інтервал між ітераціями завдання",
-      primitive: "Примітивний режим",
-      primitiveDescription: "Активуйте, якщо ви хочете виконувати примітивні завдання, які є менш ресурсоефективними",
-      proxiesList: "Список проксі",
-      proxiesListDescription: "Адреса (у файловій системі чи в Інтернеті) до файлу з проксі-серверами у форматі 'protocol://ip:port' або 'ip:port'",
-      proxyProtocol: "Проксі-протокол",
-      proxyProtocolDescription: "Протокол для використання, якщо він не визначений у списку проксі"
-    },
-    mhddosProxy: {
-      copies: "Копії",
-      copiesDescription: "Кількість запущених процесів (копій модуля). 0 для авто",
-      threads: "Потоки",
-      threadsDescription: "Кількість потоків, запущених на процес. 0 для авто",
-      useMyIp: "Задіяти мій IP",
-      useMyIpDescription: "Відсоток використання власної IP-адреси або VPN, якщо налаштовано"
-    },
     distress: {
       concurrency: "Паралелізм",
       concurrencyDescription: "Кількість створювачів завдань. 0 встановлює за замовчуванням 4096",
@@ -81,7 +61,7 @@ export default {
     month: "За місяць",
     activeness: "Activeness",
 
-    achivements: {
+    achievements: {
       peopleAreLikeShips: {
         title: "Люди як кораблі",
         subtitle: "якщо російські, то йдуть *****",
