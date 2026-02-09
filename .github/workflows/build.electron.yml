@@ -19,9 +19,6 @@ jobs:
       - name: Install dependencies
         run: |
           npm install -g @quasar/cli yarn --force
-          rm package.json, yarn.lock, quasar.config.js
-          ren package.x86.json package.json
-          ren quasar.config.x86.js quasar.conf.js
           yarn install
       - name: Build and release Windows x86 binaries 
         env:
