@@ -144,7 +144,7 @@ export abstract class Module<ConfigType extends BaseConfig> {
     abstract installVersion(versionTag: string): AsyncGenerator<InstallProgress, void, void>
     public async uninstallVersion (versionTag: string): Promise<void> {
       const installDirectory = await this.getInstallationDirectory()
-      await fs.promises.rmdir(path.join(installDirectory, versionTag), { recursive: true })
+      await fs.promises.rm(path.join(installDirectory, versionTag), { recursive: true, force: true })
     }
 
     public async installLatestVersion (): Promise<boolean> {
@@ -237,7 +237,10 @@ export abstract class Module<ConfigType extends BaseConfig> {
       }
 
       //Cache github releases for 5 minutes in order to ommit Gihub API rate limit
-      if (this.githubReleaseCacheTime === undefined || this.githubReleaseCacheTime.getTime() + 5 * 60 * 1000 > new Date().getTime()) {
+      const now = Date.now()
+      const cacheTtlMs = 5 * 60 * 1000
+      if (this.githubReleaseCacheTime === undefined || this.githubReleaseCacheTime.getTime() + cacheTtlMs < now) {
+        console.debug('[Module] Refreshing GitHub releases cache', { owner, repo })
         const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`)
         if (response.status !== 200) {
           throw new Error(`Cant fetch github releases: ${await response.text()}`)
@@ -246,6 +249,8 @@ export abstract class Module<ConfigType extends BaseConfig> {
         newReleasesList = newReleasesList.filter((release) => !release.prerelease && !release.draft)
         this.githubReleaseCache = newReleasesList
         this.githubReleaseCacheTime = new Date()
+      } else {
+        console.debug('[Module] Using cached GitHub releases', { owner, repo })
       }
 
       return await Promise.all(this.githubReleaseCache.map(async (release: any) => {
@@ -260,6 +265,9 @@ export abstract class Module<ConfigType extends BaseConfig> {
 
     protected async *downloadFile (url: string, outPath: string): AsyncGenerator<{progress: number}, void, void> {
       const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+      }
       const fileStream = fs.createWriteStream(outPath)
       const contentLengthHeader = response.headers.get('content-length')
       if (contentLengthHeader == null) {
@@ -301,6 +309,10 @@ export abstract class Module<ConfigType extends BaseConfig> {
           })
         })
         if (r.progress == 100) {
+          await new Promise<void>((resolve, reject) => {
+            fileStream.on('finish', resolve)
+            fileStream.on('error', reject)
+          })
           return
         }
         if (lastYieldProgress + 5 < r.progress || r.progress == 100) {
@@ -369,14 +381,6 @@ export abstract class Module<ConfigType extends BaseConfig> {
         config = await this.getConfig()
       }
 
-      this.autoupdateInterval = setInterval(async () => {
-        const updateConfig = await this.getConfig()
-        if (updateConfig.autoUpdate && await this.installLatestVersion() && this.isRunning) {
-          await this.stop()
-          await this.start()
-        }
-      }, 1000 * 60 * 30) // Try to autoupdate once in 30 minutes
-
       const installDirectory = await this.getInstallationDirectory()
 
       if (config.selectedVersion === undefined) {
@@ -384,6 +388,14 @@ export abstract class Module<ConfigType extends BaseConfig> {
         this.emit('execution:error', { type: 'execution:error', error })
         throw error
       }
+
+      this.autoupdateInterval = setInterval(async () => {
+        const updateConfig = await this.getConfig()
+        if (updateConfig.autoUpdate && await this.installLatestVersion() && this.isRunning) {
+          await this.stop()
+          await this.start()
+        }
+      }, 1000 * 60 * 30) // Try to autoupdate once in 30 minutes
 
       if (this.executedProcessHandler !== undefined) {
         throw new Error('Already running')
@@ -402,9 +414,11 @@ export abstract class Module<ConfigType extends BaseConfig> {
         this.emit('execution:stderr', { type: 'execution:stderr', data: this.executableOutputToString(data) })
       })
       this.executedProcessHandler.on('error', (error: Error) => {
+        this.executedProcessHandler = undefined
         this.emit('execution:error', { type: 'execution:error', error })
       })
       this.executedProcessHandler.on('close', (code: number) => {
+        this.executedProcessHandler = undefined
         this.emit('execution:stopped', { type: 'execution:stopped', exitCode: code })
       })
 

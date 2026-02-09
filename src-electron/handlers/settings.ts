@@ -36,6 +36,9 @@ export interface SettingsData {
     activeness: {
         sid?: SID
     }
+    execution: {
+        moduleToRun?: 'DISTRESS'
+    }
 }
 
 export type SettingsChangedEventHandler = (newData: SettingsData) => void
@@ -71,7 +74,8 @@ export class Settings {
             matrixMode: false,
             matrixModeUnlocked: false
         },
-        activeness: {}
+        activeness: {},
+        execution: {}
     }
     private loaded = false
     private settingsChangedEmiter = new EventEmitter()
@@ -94,7 +98,7 @@ export class Settings {
         this.deleteModulesData()
         const p = joinPath(app.getPath('appData'), 'ITArmyKitProfile')
         if (existsSync(p)) {
-            await fsPromises.rmdir(p, { recursive: true })
+            await fsPromises.rm(p, { recursive: true, force: true })
         }
     }
 
@@ -135,6 +139,10 @@ export class Settings {
 
         if (this.data.activeness === undefined) {
             this.data.activeness = {}
+        }
+
+        if (this.data.execution === undefined) {
+            this.data.execution = {}
         }
     }
 
@@ -241,7 +249,7 @@ export class Settings {
 
     async deleteModulesData() {
         if (existsSync(this.data.modules.dataPath)) {
-            await fsPromises.rmdir(this.data.modules.dataPath, { recursive: true })
+            await fsPromises.rm(this.data.modules.dataPath, { recursive: true, force: true })
         }
     }
 
@@ -328,6 +336,17 @@ export class Settings {
         await this.save()
         this.settingsChangedEmiter.emit('settingsChanged', this.data)
     }
+
+    async setExecutionModuleToRun(data: SettingsData['execution']['moduleToRun']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.execution.moduleToRun = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
 }
 
 export function handleSettings(settings: Settings) {

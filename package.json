@@ -1,6 +1,6 @@
 {
   "name": "itarmykit",
-  "version": "1.4.5",
+  "version": "1.5.0",
   "description": "ITArmyKit",
   "productName": "ITArmyKit",
   "author": {
@@ -10,12 +10,12 @@
   },
   "private": false,
   "license": "GPL-3.0",
-  "repository": "https://github.com/it-army-ua-scripts/itarmykit",
+  "repository": "https://github.com/it-army-ua-scripts/itarmykit-win-x86",
   "homepage": "https://itarmy.com.ua",
   "scripts": {
     "lint": "eslint --ext .js,.ts,.vue ./",
     "lintfix": "eslint --fix --ext .js,.ts,.vue ./",
-    "dev": "./node_modules/.bin/quasar dev -m electron",
+    "dev": "quasar dev -m electron",
     "build": "quasar build"
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "autoprefixer": "^10.4.2",
-    "electron": "^32.0.2",
+    "electron": "^22.3.25",
     "electron-builder": "^24.3.0",
     "electron-packager": "^17.1.1",
     "eslint": "^8.10.0",
@@ -55,7 +55,7 @@
     "typescript": "^4.5.4"
   },
   "engines": {
-    "node": "^18 || ^16 || ^14.19",
+    "node": ">= 20",
     "npm": ">= 6.13.4",
     "yarn": ">= 1.21.1"
   }

@@ -1,6 +1,9 @@
 <template>
   <MatrixCanvas />
-  <q-layout view="lHh Lpr lFf" class="">
+  <q-layout
+    view="lHh Lpr lFf"
+    :class="{ 'matrix-active': matrixStore.enabled }"
+  >
     <q-header
       bordered
       :class="$q.dark.isActive ? 'bg-dark' : 'bg-white text-black'"
@@ -16,7 +19,10 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title class="text-right q-pr-xl text-subtitle2">
+        <q-toolbar-title
+          class="text-right q-pr-md text-subtitle2 ellipsis"
+          style="min-width: 0"
+        >
           <ShortStatisticsComponent />
         </q-toolbar-title>
 
@@ -54,6 +60,9 @@
           IT Army Kit
           <!--🎅-->
         </q-item-label>
+        <div class="row justify-center q-mb-md app-logo-wrap">
+          <img src="~assets/icon.png" class="app-logo" alt="IT Army Kit" />
+        </div>
 
         <div class="row" style="border-top: solid 1px #aaa">
           <div
@@ -102,6 +111,7 @@ import SnowEffectComponent from "./snowEffect/SnowEffectComponent.vue";
 import MurkaDialog from "./snowEffect/MurkaDialog.vue";
 
 import ShortStatisticsComponent from "./ShortStatisticsComponent.vue";
+import { useMatrixStore } from "./matrix.store";
 
 const pages = [
   {
@@ -143,6 +153,7 @@ const pages = [
 }>;
 
 const leftDrawerOpen = ref(false);
+const matrixStore = useMatrixStore();
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -159,5 +170,15 @@ const showMurkaDialog = ref(false);
 .selectable_menu:hover {
   background-color: #ddd;
   cursor: pointer;
+}
+
+.app-logo {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.app-logo-wrap {
+  margin-top: -24px;
 }
 </style>
