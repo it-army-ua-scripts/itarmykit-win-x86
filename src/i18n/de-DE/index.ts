@@ -7,8 +7,37 @@ export default {
     modules: 'DDOS-Module',
     activeness: 'Activeness',
     settings: 'Einstellungen',
+    schedule: 'Planung',
     top: 'Ranglisten',
     developers: 'Entwickler',
+  },
+  schedule: {
+    title: 'Planung',
+    description: 'Ausgewählte Module nach Zeitfenster automatisch starten und stoppen.',
+    enabled: 'Scheduler aktivieren',
+    enabledDescription: 'Wenn aktiv, steuert die App Start/Stopp nach den gewählten Zeiten.',
+    startTime: 'Startzeit',
+    endTime: 'Endzeit',
+    intervalModule: 'Modul',
+    modulesTitle: 'Module im Zeitfenster',
+    intervalsTitle: 'Zeitintervalle',
+    noIntervals: 'Keine Intervalle konfiguriert.',
+    daysTitle: 'Wochentage',
+    addInterval: 'Intervall hinzufügen',
+    removeInterval: 'Intervall entfernen',
+    days: {
+      sun: 'So',
+      mon: 'Mo',
+      tue: 'Di',
+      wed: 'Mi',
+      thu: 'Do',
+      fri: 'Fr',
+      sat: 'Sa'
+    },
+    close: 'Schließen',
+    autoSaveHint: 'Änderungen werden automatisch gespeichert.',
+    overlapError: 'Intervalle dürfen sich nicht überschneiden.',
+    saveFailed: 'Zeitplan konnte nicht gespeichert werden. Fehler: {error}'
   },
   modules: {
     menu: {
@@ -93,7 +122,7 @@ export default {
     },
 
     data: {
-      body: "Die Anwendung wird automatisch die erforderlichen Module herunterladen und auf Ihrem PC speichern. Module und alle Daten werden im Ordner gespreichert",
+      body: "Die Anwendung wird automatisch die erforderlichen Module herunterladen und auf Ihrem PC speichern. Module und alle Daten werden im Ordner gespeichert",
       windows: "Bevor Sie fortfahren, stellen Sie sicher, dass Sie den Datenordner zu den Ausnahmen von Windows Defender und dem Antivirenprogramm hinzugefügt haben. Andernfalls werden alle heruntergeladenen Daten gelöscht.",
       openDataFolderButton: "Datenordner öffnen",
       changeDataFolderButton: "Datenordner ändern",
@@ -153,7 +182,7 @@ export default {
     darkMode: "Dunkelmodus",
     matrixMode: "Matrix-Modus",
     autoUpdates: "Automatische Updates",
-    autoUpdatesDescription: "Die Anwendung automatisch auf die letzte Version aktualiseren.",
+    autoUpdatesDescription: "Die Anwendung automatisch auf die letzte Version aktualisieren.",
     autoStartup: "Autostart",
     autoStartupDescription: "Die Anwendung automatisch starten, wenn das System hochfährt.",
     hideTray: "Anwendung im Infobereich verstecken",
@@ -169,7 +198,7 @@ export default {
     changeModulesDataLocation: "Den Speicherort der Moduldaten ändern",
     deleteStatistics: "Statistiken löschen",
     deleteModulesCache: "Modulcache löschen",
-    deleteAllTheData: "Werkeinstellungen",
+    deleteAllTheData: "Werkseinstellungen",
 
     matrixQuiz: {
       header: "Wach auf, {name} ...",
@@ -189,8 +218,37 @@ export default {
 	bytes: "Gesendet / Datenverkehr / Insgesamt",
     bytesHint: "Die Statistiken zum gesendeten Datenverkehr können ungenau sein. Dies hängt vom Modul und seiner Funktionsweise ab. Die Gesamtstatistik ist immer präzise und zeigt aggregierte Informationen aus allen laufenden Tools an.",
 	moduleStatus: "Modul-Status",
+	control: "Systemsteuerung",
+	autostart: "Autostart",
+	scheduler: "Scheduler",
+	on: "AN",
+	off: "AUS",
+	intervals: "Intervalle",
 	updates: "KIT Version",
 	latest: "Aktuell",
+  chart: {
+    now: "Jetzt",
+    average: "Durchschnitt",
+    peak: "Spitzenwert",
+    bitrate: "Datenrate",
+    trend: "Trend",
+    view: {
+      raw: "Roh",
+      smooth: "Geglättet",
+    },
+    noData: "Noch keine Statistik",
+    events: {
+      started: "Gestartet",
+      stopped: "Gestoppt",
+      error: "Fehler",
+    },
+    ranges: {
+      m5: "5 Min",
+      m15: "15 Min",
+      h1: "1 Std",
+      h6: "6 Std",
+    },
+  },
   activeness: {
     score: "Activeness Score",
   },
@@ -199,17 +257,17 @@ export default {
 
   developers: {
     itaySubtitle: "Eine Community ukrainischer IT-Spezialisten, die Ende Februar 2022 gegründet wurde, um den Feind im Informations- und Cyberspace nach dem Beginn der russischen Invasion in der Ukraine am 24. Februar 2022 zu neutralisieren.",
-    shieldMore: "Lernen Sie über uns und unsere Operationen:",
-    partners: "Kollege und Partner",
+    shieldMore: "Erfahren Sie mehr über uns und unsere Operationen:",
+    partners: "Kollegen und Partner",
     contacts: "Kontakte",
     contactP1: "Für Fragen zur Anwendung, fragen Sie zunächst im IT Army-Chat:",
     contactP1_1: "Oder als letztes Mittel, auf unserem Kanal",
     contactP1_2: "Wenn Sie uns auf dem Kanal schreiben, denken Sie daran, dass wir nur über sehr begrenzte Ressourcen verfügen und möglicherweise nicht antworten können. In der Regel gibt es jedoch Community-Mitglieder, die Ihnen helfen können.",
-    contactP2: "Technische Probleme mit der Anwendung - wenn Sie wissen, wie man GitHub verwendet, erstellen Sie bitte issue im Repository.",
+    contactP2: "Technische Probleme mit der Anwendung - wenn Sie wissen, wie man GitHub verwendet, erstellen Sie bitte ein Issue im Repository.",
     contactP2_1: "Wenn nicht - fragen Sie im IT Army-Chat.",
     contactP3: "Fragen über Module - richten Sie sie an die Modul-Entwickler.",
-    contributors: "Contributors",
-      contributorsSubtitle: "Helfen Sie dabei, das Programm zu verbessern, und Ihr Name wird automatisch in dieser Liste erscheinen. Die Liste zeigt auch Contributors zur vorherigen Version der Anwendung und einigen Modulen."
+    contributors: "Mitwirkende",
+      contributorsSubtitle: "Helfen Sie dabei, das Programm zu verbessern, und Ihr Name wird automatisch in dieser Liste erscheinen. Die Liste zeigt auch Mitwirkende zur vorherigen Version der Anwendung und einigen Modulen."
   },
 
   activeness: {
@@ -239,3 +297,5 @@ export default {
     notifyFailedTOIgnoreTask: "Fehler beim Ignorieren der Aufgabe. Fehler: {error}",
   }
 }
+
+

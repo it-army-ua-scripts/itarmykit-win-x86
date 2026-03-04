@@ -1,4 +1,4 @@
-// This is just an example,
+﻿// This is just an example,
 // so you can safely delete all default props below
 
 export default {
@@ -7,8 +7,37 @@ export default {
     modules: 'DDOS модулі',
     activeness: 'Activeness',
     settings: 'Налаштування',
+    schedule: 'Планування',
     top: 'Рейтинги',
     developers: 'Розробники',
+  },
+  schedule: {
+    title: 'Планування',
+    description: 'Автоматично запускайте та зупиняйте вибрані модулі за часовим вікном.',
+    enabled: 'Увімкнути планувальник',
+    enabledDescription: 'Коли увімкнено, застосунок керує запуском/зупинкою модулів за обраним часом.',
+    startTime: 'Час початку',
+    endTime: 'Час завершення',
+    intervalModule: 'Модуль',
+    modulesTitle: 'Модулі для запуску у вікні розкладу',
+    intervalsTitle: 'Часові проміжки',
+    noIntervals: 'Проміжки не налаштовано.',
+    daysTitle: 'Дні тижня',
+    addInterval: 'Додати проміжок',
+    removeInterval: 'Видалити проміжок',
+    days: {
+      sun: 'Нд',
+      mon: 'Пн',
+      tue: 'Вт',
+      wed: 'Ср',
+      thu: 'Чт',
+      fri: 'Пт',
+      sat: 'Сб'
+    },
+    close: 'Закрити',
+    autoSaveHint: 'Зміни зберігаються автоматично.',
+    overlapError: 'Інтервали не можуть перетинатися між собою.',
+    saveFailed: 'Не вдалося зберегти розклад. Помилка: {error}'
   },
   modules: {
     menu: {
@@ -55,7 +84,7 @@ export default {
       PACKETFloodDescription: "Не працює на ОС Windows! Дозволити атаку PACKET-флуд. Працює, якщо ви використовуєте свій власний IP"
     }
   },
-  top: {
+    top: {
     volunteers: "TOП ВОЛОНТЕРІВ",
     week: "За тиждень",
     month: "За місяць",
@@ -190,8 +219,37 @@ export default {
 	bytes: "Відправлено / Трафік / Загалом",
   bytesHint: "Статистика відправленого трафіку може бути не точна для деяких модулів так як вони не мають компатибільності з кітом. Загальна статистика завжди є точною але вимагає прописаного IT Army ID для роботи. Загальна статистика відображає дані зі всіх ваших підключених тулів.",
 	moduleStatus: "Статус модуля",
+	control: "Системний контроль",
+	autostart: "Автостарт",
+	scheduler: "Шедулер",
+	on: "УВІМК",
+	off: "ВИМК",
+	intervals: "Інтервали",
 	updates: "Версія KIT",
 	latest: "Поточна",
+  chart: {
+    now: "Зараз",
+    average: "Середня",
+    peak: "Пік",
+    bitrate: "Швидкість",
+    trend: "Тренд",
+    view: {
+      raw: "Сирі",
+      smooth: "Плавні",
+    },
+    noData: "Статистики ще немає",
+    events: {
+      started: "Запущено",
+      stopped: "Зупинено",
+      error: "Помилка",
+    },
+    ranges: {
+      m5: "5 хв",
+      m15: "15 хв",
+      h1: "1 год",
+      h6: "6 год",
+    },
+  },
   activeness: {
     score: "Бали Activeness",
   },
@@ -240,3 +298,9 @@ export default {
     notifyFailedTOIgnoreTask: "Не вдалося проігнорувати завдання. Помилка: {error}",
   }
 }
+
+
+
+
+
+

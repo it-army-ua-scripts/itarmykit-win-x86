@@ -88,7 +88,7 @@ export class ExecutionEngine {
         })
     }
 
-    constructor(modules: Array<Distress>) {
+    constructor(modules: Array<Distress>, settings: Settings) {
         this.modules = modules
         this.settings = settings
         this.runningModule = null
@@ -193,7 +193,15 @@ export class ExecutionEngine {
     public async init() {
         const config = await this.getState()
         if (config.run) {
-            await this.startModule()
+            if (config.moduleToRun) {
+                await this.startModule()
+            } else {
+                await this.stateLock.runExclusive(async () => {
+                    const updated = await this.getState()
+                    updated.run = false
+                    await this.setState(updated)
+                })
+            }
         }
     }
 
@@ -221,6 +229,15 @@ export class ExecutionEngine {
             config.stdErr = []
             await this.setState(config)
         })
+
+        if (!moduleName) {
+            await this.stateLock.runExclusive(async () => {
+                const config = await this.getState()
+                config.run = false
+                await this.setState(config)
+            })
+            throw new Error('Module to run is not set')
+        }
 
         const module = this.modules.find(m => m.name === moduleName)
         if (!module) {
@@ -359,18 +376,26 @@ export class ExecutionEngine {
     }
 }
 
-export function handleExecutionEngine(modules: Array<Distress>): ExecutionEngine {
+export function handleExecutionEngine(modules: Array<Distress>, settings: Settings): ExecutionEngine {
     const engine = new ExecutionEngine(modules, settings)
+    const disableSchedulerForManualControl = async () => {
+        const currentSettings = await settings.getData()
+        if (currentSettings.schedule.enabled) {
+            await settings.setScheduleEnabled(false)
+        }
+    }
 
     app.on('before-quit', async () => {
         await engine.dispose()
     })
 
     ipcMain.handle('executionEngine:startModule', async () => {
+        await disableSchedulerForManualControl()
         await engine.startModule()
     })
 
     ipcMain.handle('executionEngine:stopModule', async () => {
+        await disableSchedulerForManualControl()
         await engine.stopModule()
     })
 
@@ -379,6 +404,7 @@ export function handleExecutionEngine(modules: Array<Distress>): ExecutionEngine
     })
 
     ipcMain.handle('executionEngine:setModuleToRun', async (_e, module?: ModuleName) => {
+        await disableSchedulerForManualControl()
         await engine.setModuleToRun(module)
     })
 

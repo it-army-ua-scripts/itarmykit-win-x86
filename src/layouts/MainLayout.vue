@@ -48,7 +48,7 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered class="">
+    <q-drawer v-model="leftDrawerOpen" :width="260" show-if-above bordered class="">
       <q-list>
         <q-item-label
           header
@@ -89,6 +89,9 @@
             </div>
           </div>
         </div>
+        <div class="q-pa-sm">
+          <SystemControlStatusComponent />
+        </div>
       </q-list>
     </q-drawer>
 
@@ -111,6 +114,7 @@ import SnowEffectComponent from "./snowEffect/SnowEffectComponent.vue";
 import MurkaDialog from "./snowEffect/MurkaDialog.vue";
 
 import ShortStatisticsComponent from "./ShortStatisticsComponent.vue";
+import SystemControlStatusComponent from "src/pages/dashboard/SystemControlStatusComponent.vue";
 import { useMatrixStore } from "./matrix.store";
 
 const pages = [
@@ -137,6 +141,12 @@ const pages = [
     title: "layout.settings",
     page: "settings",
     icon: "settings",
+  },
+  {
+    name: "schedule",
+    title: "layout.schedule",
+    page: "schedule",
+    icon: "schedule",
   },
   { name: "top", title: "layout.top", page: "top", icon: "leaderboard" },
   {

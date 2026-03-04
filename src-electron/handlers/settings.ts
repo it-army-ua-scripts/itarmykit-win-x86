@@ -1,6 +1,6 @@
 import { join as joinPath }from 'path'
 import { app, ipcMain } from 'electron'
-import { promises as fsPromises, readFileSync, existsSync } from 'fs'
+import { promises as fsPromises, readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
 import EventEmitter from 'events';
 import { SID } from 'app/lib/activeness/api';
 
@@ -9,7 +9,7 @@ export interface SettingsData {
         autoUpdate: boolean
         hideInTray: boolean
         startOnBoot: boolean,
-        language: 'en-US' | 'ua-UA'
+        language: 'en-US' | 'ua-UA' | 'de-DE'
     },
     modules: {
         dataPath: string;
@@ -19,6 +19,8 @@ export interface SettingsData {
         startTime: string;
         endTime: string;
         activity: 'DO_NOTHING' | 'MINIMAL'
+        modules: Array<'DISTRESS'>
+        intervals: ScheduleInterval[]
     },
     itarmy: {
         uuid: string,
@@ -41,7 +43,69 @@ export interface SettingsData {
     }
 }
 
+
 export type SettingsChangedEventHandler = (newData: SettingsData) => void
+
+function parseTimeToMinutes(time: string): number | null {
+    const parts = time.split(':')
+    if (parts.length !== 2) {
+        return null
+    }
+    const hours = Number(parts[0])
+    const minutes = Number(parts[1])
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+        return null
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        return null
+    }
+    return hours * 60 + minutes
+}
+
+function validateScheduleIntervalsNoOverlap(intervals: ScheduleInterval[]) {
+    const segmentsByDay = new Map<number, Array<{ start: number, end: number }>>()
+    for (let day = 0; day <= 6; day++) {
+        segmentsByDay.set(day, [])
+    }
+
+    for (const interval of intervals) {
+        const start = parseTimeToMinutes(interval.startTime)
+        const end = parseTimeToMinutes(interval.endTime)
+        if (start === null || end === null) {
+            throw new Error(`Invalid interval time format: ${interval.startTime}-${interval.endTime}`)
+        }
+
+        const days = Array.from(new Set((interval.days || []).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)))
+        for (const day of days) {
+            if (start === end) {
+                segmentsByDay.get(day)?.push({ start: 0, end: 1440 })
+                continue
+            }
+
+            if (start < end) {
+                segmentsByDay.get(day)?.push({ start, end })
+                continue
+            }
+
+            // Cross-midnight interval: split into current and next day.
+            segmentsByDay.get(day)?.push({ start, end: 1440 })
+            const nextDay = (day + 1) % 7
+            segmentsByDay.get(nextDay)?.push({ start: 0, end })
+        }
+    }
+
+    for (let day = 0; day <= 6; day++) {
+        const daySegments = segmentsByDay.get(day) || []
+        daySegments.sort((a, b) => a.start - b.start)
+        for (let i = 1; i < daySegments.length; i++) {
+            const prev = daySegments[i - 1]
+            const current = daySegments[i]
+            if (current.start < prev.end) {
+                throw new Error('Schedule intervals must not overlap')
+            }
+        }
+    }
+}
 
 export class Settings {
     private static settingsFile = joinPath(app.getPath('appData'), 'ITArmyKitProfile', 'settings.json')
@@ -59,7 +123,16 @@ export class Settings {
             enabled: false,
             startTime: '07:30',
             endTime: '17:30',
-            activity: 'DO_NOTHING'
+            activity: 'DO_NOTHING',
+            modules: ['DISTRESS'],
+            intervals: [
+                {
+                    startTime: '07:30',
+                    endTime: '17:30',
+                    days: [0, 1, 2, 3, 4, 5, 6],
+                    module: 'DISTRESS'
+                }
+            ]
         },
         itarmy: {
             uuid: '',
@@ -103,6 +176,7 @@ export class Settings {
     }
 
     async save() {
+        await fsPromises.mkdir(joinPath(app.getPath('appData'), 'ITArmyKitProfile'), { recursive: true })
         await fsPromises.writeFile(Settings.settingsFile, JSON.stringify(this.data))
     }
 
@@ -121,6 +195,9 @@ export class Settings {
         if (this.data.system.language === undefined) {
             this.data.system.language = 'en-US'
         }
+        if (!['en-US', 'ua-UA', 'de-DE'].includes(this.data.system.language)) {
+            this.data.system.language = 'en-US'
+        }
 
         if (this.data.bootstrap === undefined) {
             this.data.bootstrap = {
@@ -136,6 +213,71 @@ export class Settings {
                 matrixModeUnlocked: false
             }
         }
+
+        if (this.data.schedule === undefined) {
+            this.data.schedule = {
+                enabled: false,
+                startTime: '07:30',
+                endTime: '17:30',
+                activity: 'DO_NOTHING',
+                modules: ['DISTRESS'],
+                intervals: [
+                    {
+                        startTime: '07:30',
+                        endTime: '17:30',
+                        days: [0, 1, 2, 3, 4, 5, 6],
+                        module: 'DISTRESS'
+                    }
+                ]
+            }
+        }
+        if (typeof this.data.schedule.enabled !== 'boolean') {
+            this.data.schedule.enabled = false
+        }
+        if (typeof this.data.schedule.startTime !== 'string') {
+            this.data.schedule.startTime = '07:30'
+        }
+        if (typeof this.data.schedule.endTime !== 'string') {
+            this.data.schedule.endTime = '17:30'
+        }
+        if (this.data.schedule.activity !== 'DO_NOTHING' && this.data.schedule.activity !== 'MINIMAL') {
+            this.data.schedule.activity = 'DO_NOTHING'
+        }
+
+        if (!Array.isArray(this.data.schedule.modules)) {
+            this.data.schedule.modules = ['DISTRESS']
+        }
+        if (!Array.isArray(this.data.schedule.intervals)) {
+            this.data.schedule.intervals = []
+        }
+        if (this.data.schedule.intervals.length === 0) {
+            this.data.schedule.intervals = [
+                {
+                    startTime: this.data.schedule.startTime || '07:30',
+                    endTime: this.data.schedule.endTime || '17:30',
+                    days: [0, 1, 2, 3, 4, 5, 6],
+                    module: 'DISTRESS'
+                }
+            ]
+        }
+        this.data.schedule.intervals = this.data.schedule.intervals
+            .filter((interval: any) => interval && typeof interval === 'object')
+            .map((interval: any) => {
+                const startTime = typeof interval.startTime === 'string' ? interval.startTime : '07:30'
+                const endTime = typeof interval.endTime === 'string' ? interval.endTime : '17:30'
+                const days = Array.isArray(interval.days)
+                    ? interval.days
+                        .map((day: any) => Number(day))
+                        .filter((day: number) => Number.isInteger(day) && day >= 0 && day <= 6)
+                    : [0, 1, 2, 3, 4, 5, 6]
+                const module = 'DISTRESS'
+                return {
+                    startTime,
+                    endTime,
+                    days: Array.from(new Set(days)),
+                    module
+                }
+            })
 
         if (this.data.activeness === undefined) {
             this.data.activeness = {}
@@ -161,7 +303,8 @@ export class Settings {
             this.data = JSON.parse(readFileSync(Settings.settingsFile, 'utf-8'))
             this.applyLoadBackwardsCompatibility()
         } catch (e) {
-            void this.save()
+            mkdirSync(joinPath(app.getPath('appData'), 'ITArmyKitProfile'), { recursive: true })
+            writeFileSync(Settings.settingsFile, JSON.stringify(this.data))
         }
         this.loaded = true
     }
@@ -347,6 +490,57 @@ export class Settings {
         this.settingsChangedEmiter.emit('settingsChanged', this.data)
     }
 
+    async setScheduleEnabled(data: SettingsData['schedule']['enabled']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.schedule.enabled = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setScheduleStartTime(data: SettingsData['schedule']['startTime']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.schedule.startTime = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setScheduleEndTime(data: SettingsData['schedule']['endTime']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.schedule.endTime = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setScheduleModules(data: SettingsData['schedule']['modules']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        this.data.schedule.modules = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
+    async setScheduleIntervals(data: SettingsData['schedule']['intervals']) {
+        if (!this.loaded) {
+            await this.load()
+        }
+
+        validateScheduleIntervalsNoOverlap(data)
+        this.data.schedule.intervals = data
+        await this.save()
+        this.settingsChangedEmiter.emit('settingsChanged', this.data)
+    }
+
 }
 
 export function handleSettings(settings: Settings) {
@@ -422,4 +616,31 @@ export function handleSettings(settings: Settings) {
     ipcMain.handle('settings:gui:matrixModeUnlocked', async (_e, data: SettingsData['gui']['matrixModeUnlocked']) => {
         await settings.setGuiMatrixModeUnlocked(data)
     })
+
+    ipcMain.handle('settings:schedule:enabled', async (_e, data: SettingsData['schedule']['enabled']) => {
+        await settings.setScheduleEnabled(data)
+    })
+
+    ipcMain.handle('settings:schedule:startTime', async (_e, data: SettingsData['schedule']['startTime']) => {
+        await settings.setScheduleStartTime(data)
+    })
+
+    ipcMain.handle('settings:schedule:endTime', async (_e, data: SettingsData['schedule']['endTime']) => {
+        await settings.setScheduleEndTime(data)
+    })
+
+    ipcMain.handle('settings:schedule:modules', async (_e, data: SettingsData['schedule']['modules']) => {
+        await settings.setScheduleModules(data)
+    })
+
+    ipcMain.handle('settings:schedule:intervals', async (_e, data: SettingsData['schedule']['intervals']) => {
+        await settings.setScheduleIntervals(data)
+    })
+}
+
+export interface ScheduleInterval {
+    startTime: string
+    endTime: string
+    days: number[]
+    module: 'DISTRESS'
 }
