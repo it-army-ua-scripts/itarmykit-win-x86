@@ -210,7 +210,7 @@ module.exports = configure(function (/* ctx */) {
           target: [
             {
               target: 'nsis',
-              arch: ['x64', 'arm64']
+              arch: ['ia32']
             }
           ]
         },
