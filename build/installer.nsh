@@ -10,6 +10,7 @@
   ${ElseIf} $0 == 3010
     DetailPrint "VC++ Redistributable installed. Reboot is required."
   ${Else}
-    DetailPrint "VC++ Redistributable installer exited with code $0."
+    MessageBox MB_ICONSTOP|MB_OK "Microsoft Visual C++ Redistributable (x86) installation failed with code $0. Application installation will be cancelled."
+    Abort
   ${EndIf}
 !macroend
