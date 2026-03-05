@@ -3,10 +3,11 @@
 !macro customInit
   CreateDirectory "$TEMP\ITArmyKit"
   SetOutPath "$TEMP\ITArmyKit"
+  DetailPrint "Staging VC++ installer to: $TEMP\ITArmyKit\VCRedist.exe"
   File "/oname=$TEMP\ITArmyKit\VCRedist.exe" "${PROJECT_DIR}\VCRedist.exe"
+  IfFileExists "$TEMP\ITArmyKit\VCRedist.exe" +2 0
+    MessageBox MB_ICONSTOP|MB_OK "VCRedist.exe was not staged to $TEMP\ITArmyKit"
   ExecWait '"$TEMP\ITArmyKit\VCRedist.exe" /S' $0
-  Delete "$TEMP\ITArmyKit\VCRedist.exe"
-  RMDir "$TEMP\ITArmyKit"
 
   ${If} $0 == 0
     DetailPrint "VC++ Redistributable installed."
