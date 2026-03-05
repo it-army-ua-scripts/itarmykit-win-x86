@@ -1,6 +1,8 @@
 import { Module, Version, InstallProgress, InstallationTarget, BaseConfig, ModuleName } from './module'
 import { getCPUArchitecture } from './archLib'
 
+const WIN7_X86_TEMP_PINNED_TAG = '0.7.20'
+
 export interface Config extends BaseConfig {
   // Disable UDP flood or not
   DisableUDPFlood: boolean;
@@ -43,8 +45,28 @@ export class Distress extends Module<Config> {
     }
   }
 
+  private isWin32Ia32Target (): boolean {
+    return process.platform === 'win32' && getCPUArchitecture() === 'ia32'
+  }
+
   override async getAllVersions (): Promise<Version[]> {
-    return await this.loadVersionsFromGithub('Yneth', 'distress-releases')
+    const versions = await this.loadVersionsFromGithub('Yneth', 'distress-releases')
+    if (!this.isWin32Ia32Target()) {
+      return versions
+    }
+
+    // TEMP: pin Distress for Win7 x86 until upstream startup regression is fixed.
+    const pinned = versions.find(version => version.tag === WIN7_X86_TEMP_PINNED_TAG)
+    if (pinned) {
+      return [pinned]
+    }
+
+    return [{
+      tag: WIN7_X86_TEMP_PINNED_TAG,
+      name: `distress ${WIN7_X86_TEMP_PINNED_TAG} (temporary pin)`,
+      body: 'Temporary pin for Win7 x86 compatibility. TODO: remove after upstream fix.',
+      installed: false
+    }]
   }
 
   private assetMapping = [
@@ -63,7 +85,8 @@ export class Distress extends Module<Config> {
   }>
 
   override async *installVersion (versionTag: string): AsyncGenerator<InstallProgress, void, void> {
-    const progressGenerator = this.installVersionFromGithub('Yneth', 'distress-releases', versionTag, this.assetMapping)
+    const effectiveTag = this.isWin32Ia32Target() ? WIN7_X86_TEMP_PINNED_TAG : versionTag
+    const progressGenerator = this.installVersionFromGithub('Yneth', 'distress-releases', effectiveTag, this.assetMapping)
 
     for await (const progress of progressGenerator) {
       yield progress
