@@ -35,6 +35,3 @@ yarn-error.log*
 
 # local .env files
 .env.local*
-
-# Build-time downloaded redistributable
-VC_redist.x86.exe

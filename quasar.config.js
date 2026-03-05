@@ -218,13 +218,6 @@ module.exports = configure(function (/* ctx */) {
           deleteAppDataOnUninstall: true,
           include: 'build/installer.nsh'
         },
-        extraResources: [
-          {
-            from: 'VC_redist.x86.exe',
-            to: 'VC_redist.x86.exe'
-          }
-        ],
-
         artifactName: '${name}-${os}-${arch}.${ext}',
         appId: 'itarmykit_x86',
 

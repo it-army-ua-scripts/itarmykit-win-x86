@@ -20,11 +20,6 @@ jobs:
         run: |
           npm install -g @quasar/cli yarn --force
           yarn install
-      - name: Download VC++ Redistributable x86
-        shell: powershell
-        run: |
-          Invoke-WebRequest -Uri "https://aka.ms/highdpimfc2013x86enu" -OutFile "VC_redist.x86.exe"
-          if (!(Test-Path "VC_redist.x86.exe")) { throw "VC_redist.x86.exe download failed" }
       - name: Build and release Windows x86 binaries 
         env:
           EP_GH_IGNORE_TIME: true
