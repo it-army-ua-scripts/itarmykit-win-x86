@@ -25,5 +25,5 @@ jobs:
           EP_GH_IGNORE_TIME: true
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          quasar build --mode electron --publish always -T win32 --icon=/src-electron/icons/icon.ico
+          quasar build --mode electron --bundler builder --publish always -T win32 -A ia32 --icon=/src-electron/icons/icon.ico
 

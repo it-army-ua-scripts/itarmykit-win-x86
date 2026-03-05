@@ -1,6 +1,7 @@
 import { app, BrowserWindow, nativeTheme, nativeImage, ipcMain } from 'electron'
 import path from 'path'
 import os from 'os'
+import fs from 'fs'
 
 import { handle } from './handlers'
 
@@ -28,8 +29,26 @@ try {
 } catch (_) {}
 
 let mainWindow: BrowserWindow | undefined
+const startupLogPath = path.join(app.getPath('appData'), 'ITArmyKitProfile', 'startup.log')
+
+function logStartup(message: string, extra?: unknown) {
+  try {
+    fs.mkdirSync(path.dirname(startupLogPath), { recursive: true })
+    const timestamp = new Date().toISOString()
+    const suffix = extra === undefined ? '' : ` ${JSON.stringify(extra)}`
+    fs.appendFileSync(startupLogPath, `[${timestamp}] ${message}${suffix}\n`, 'utf8')
+  } catch (_) {}
+}
+
+process.on('uncaughtException', (error) => {
+  logStartup('uncaughtException', { message: error.message, stack: error.stack })
+})
+process.on('unhandledRejection', (reason) => {
+  logStartup('unhandledRejection', { reason: String(reason) })
+})
 
 function createWindow () {
+  logStartup('createWindow:start')
   let appIcon: string | undefined = undefined
   if (platform == 'win32'){
     appIcon = path.resolve(__dirname, 'icons', 'icon.ico')
@@ -55,8 +74,18 @@ function createWindow () {
   })
 
   console.log(process.env.APP_URL)
+  logStartup('createWindow:loadURL', { appUrl: process.env.APP_URL })
   mainWindow.loadURL(process.env.APP_URL)
   mainWindow.webContents.session
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      mainWindow.show()
+    }
+  })
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('did-fail-load', { errorCode, errorDescription, validatedURL })
+    logStartup('did-fail-load', { errorCode, errorDescription, validatedURL })
+  })
 
   if (process.env.DEBUGGING) {
     // if on DEV or Production with debug enabled
@@ -88,7 +117,14 @@ function createWindow () {
     }
   })
 
-  handle(mainWindow)
+  try {
+    handle(mainWindow)
+    logStartup('main-process-handlers:init:ok')
+  } catch (error) {
+    console.error('main process init failed', error)
+    logStartup('main-process-handlers:init:failed', { error: String(error) })
+    mainWindow.show()
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {
