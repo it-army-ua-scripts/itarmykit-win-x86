@@ -215,6 +215,8 @@ module.exports = configure(function (/* ctx */) {
           ]
         },
         nsis: {
+          perMachine: true,
+          allowElevation: true,
           deleteAppDataOnUninstall: true,
           include: 'build/installer.nsh'
         },
