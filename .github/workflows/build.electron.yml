@@ -1,4 +1,4 @@
-﻿name: Build and publish electron app
+name: Build and publish electron app
 
 on:
   push:
@@ -12,14 +12,15 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: 'yarn'
       - name: Install dependencies
         run: |
-          npm install -g @quasar/cli yarn --force
-          yarn install
+          corepack enable
+          yarn install --frozen-lockfile
       - name: Download VC++ Redistributable x86
         shell: powershell
         run: |
@@ -30,5 +31,6 @@ jobs:
           EP_GH_IGNORE_TIME: true
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
-          quasar build --mode electron --bundler builder --publish always -T win32 -A ia32 --icon=/src-electron/icons/icon.ico
+          yarn quasar build --mode electron --bundler builder --publish always -T win32 -A ia32 --icon=/src-electron/icons/icon.ico
+
 
