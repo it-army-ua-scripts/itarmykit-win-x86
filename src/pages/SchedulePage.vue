@@ -183,7 +183,7 @@ type ScheduleInterval = {
 }
 const intervals = ref<ScheduleInterval[]>([])
 
-function cloneIntervals(items: ScheduleInterval[]): ScheduleInterval[] {
+function cloneIntervals (items: ScheduleInterval[]): ScheduleInterval[] {
   return items.map((interval) => ({
     startTime: interval.startTime,
     endTime: interval.endTime,
@@ -205,16 +205,16 @@ const dayOptions = [
   { label: t('schedule.days.sat'), value: 6 }
 ]
 
-async function setEnabled(newValue: boolean) {
+async function setEnabled (newValue: boolean) {
   enabled.value = newValue
   await window.settingsAPI.schedule.setEnabled(newValue)
 }
 
-function normalizeDays(days: number[]): number[] {
+function normalizeDays (days: number[]): number[] {
   return Array.from(new Set(days.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))).sort()
 }
 
-async function saveIntervals(): Promise<boolean> {
+async function saveIntervals (): Promise<boolean> {
   const payload = intervals.value.map((interval) => ({
     startTime: String(interval.startTime || ''),
     endTime: String(interval.endTime || ''),
@@ -237,7 +237,7 @@ async function saveIntervals(): Promise<boolean> {
   }
 }
 
-async function setIntervalStart(index: number, newValue: string | number | null) {
+async function setIntervalStart (index: number, newValue: string | number | null) {
   const previous = cloneIntervals(intervals.value)
   const value = String(newValue || '')
   intervals.value[index].startTime = value
@@ -246,7 +246,7 @@ async function setIntervalStart(index: number, newValue: string | number | null)
   }
 }
 
-async function setIntervalEnd(index: number, newValue: string | number | null) {
+async function setIntervalEnd (index: number, newValue: string | number | null) {
   const previous = cloneIntervals(intervals.value)
   const value = String(newValue || '')
   intervals.value[index].endTime = value
@@ -255,7 +255,7 @@ async function setIntervalEnd(index: number, newValue: string | number | null) {
   }
 }
 
-async function toggleIntervalDay(index: number, day: number) {
+async function toggleIntervalDay (index: number, day: number) {
   const previous = cloneIntervals(intervals.value)
   const current = new Set(intervals.value[index].days)
   if (current.has(day)) {
@@ -269,7 +269,7 @@ async function toggleIntervalDay(index: number, day: number) {
   }
 }
 
-async function setIntervalModule(index: number, newValue: ModuleName | string | null) {
+async function setIntervalModule (index: number, newValue: ModuleName | string | null) {
   const previous = cloneIntervals(intervals.value)
   const value = String(newValue || '')
   const selected = moduleOptions.find((option) => option.value === value)?.value
@@ -282,7 +282,7 @@ async function setIntervalModule(index: number, newValue: ModuleName | string | 
   }
 }
 
-async function addInterval() {
+async function addInterval () {
   const previous = cloneIntervals(intervals.value)
   intervals.value.push({
     startTime: '07:30',
@@ -295,7 +295,7 @@ async function addInterval() {
   }
 }
 
-async function removeInterval(index: number) {
+async function removeInterval (index: number) {
   const previous = cloneIntervals(intervals.value)
   intervals.value.splice(index, 1)
   if (!(await saveIntervals())) {
@@ -303,7 +303,7 @@ async function removeInterval(index: number) {
   }
 }
 
-async function loadSettings() {
+async function loadSettings () {
   const settings = await window.settingsAPI.get()
   enabled.value = settings.schedule.enabled
   intervals.value = settings.schedule.intervals.map((interval) => ({

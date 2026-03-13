@@ -10,6 +10,7 @@
 
 const { configure } = require('quasar/wrappers')
 const path = require('path')
+const fs = require('fs')
 
 module.exports = configure(function (/* ctx */) {
   return {
@@ -29,8 +30,8 @@ module.exports = configure(function (/* ctx */) {
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
-      'i18n'
-
+      'i18n',
+      'stability'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
@@ -125,6 +126,10 @@ module.exports = configure(function (/* ctx */) {
     animations: [],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#sourcefiles
+    sourceFiles: {
+      store: 'src/stores/index'
+    },
+
     // sourceFiles: {
     //   rootComponent: 'src/App.vue',
     //   router: 'src/router/index',
@@ -218,12 +223,15 @@ module.exports = configure(function (/* ctx */) {
           deleteAppDataOnUninstall: true,
           include: 'build/installer.nsh'
         },
-        extraResources: [
-          {
-            from: 'VC_redist.x86.exe',
-            to: 'VC_redist.x86.exe'
-          }
-        ],
+        extraResources: fs.existsSync(path.resolve(__dirname, 'VC_redist.x86.exe'))
+          ? [
+              {
+                from: 'VC_redist.x86.exe',
+                to: 'VC_redist.x86.exe'
+              }
+            ]
+          : [],
+        // eslint-disable-next-line no-template-curly-in-string
         artifactName: '${name}-${os}-${arch}.${ext}',
         appId: 'itarmykit_x86',
 

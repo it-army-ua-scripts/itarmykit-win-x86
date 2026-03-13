@@ -1,6 +1,9 @@
 !include "LogicLib.nsh"
 
 !macro customInstall
+  IfFileExists "$INSTDIR\resources\VC_redist.x86.exe" runVcRedist skipVcRedist
+
+  runVcRedist:
   ExecWait '"$INSTDIR\resources\VC_redist.x86.exe" /install /quiet /norestart' $R0
 
   ${If} "$R0" == "0"
@@ -10,7 +13,12 @@
   ${ElseIf} "$R0" == "3010"
     DetailPrint "VC++ Redistributable installed. Reboot is required."
   ${Else}
-    MessageBox MB_ICONSTOP|MB_OK "Microsoft Visual C++ Redistributable installation failed with code $R0. Application installation will be cancelled."
-    Abort
+    DetailPrint "VC++ Redistributable installation returned code $R0. Continuing without bundled runtime."
   ${EndIf}
+  Goto doneVcRedist
+
+  skipVcRedist:
+  DetailPrint "VC++ Redistributable payload was not bundled. Skipping runtime install step."
+
+  doneVcRedist:
 !macroend

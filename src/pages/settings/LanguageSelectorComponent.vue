@@ -11,7 +11,7 @@
     <template v-slot:option="scope">
       <q-item class="menu-item" v-bind="scope.itemProps">
         <q-item-section>
-          <q-item-label v-text="scope.opt.name" />
+          <q-item-label>{{ scope.opt.name }}</q-item-label>
         </q-item-section>
       </q-item>
     </template>
@@ -56,7 +56,7 @@ const languages: Language[] = [
 const language = ref<Language>(languages[0])
 const showThatRussiaIsTerroistCountry = ref(false)
 
-async function onLanguageSelected(lang: Language) {
+async function onLanguageSelected (lang: Language) {
   if (lang.symbol === 'ru-RU') {
     showThatRussiaIsTerroistCountry.value = true
     await loadSavedLanguage()
@@ -68,7 +68,7 @@ async function onLanguageSelected(lang: Language) {
   language.value = lang
 }
 
-async function loadSavedLanguage() {
+async function loadSavedLanguage () {
   const settings = await window.settingsAPI.get()
   language.value = languages.find((l) => l.symbol === settings.system.language) || languages[0]
 }

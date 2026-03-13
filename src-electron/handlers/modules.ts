@@ -4,7 +4,7 @@ import { IpcMainInvokeEvent, ipcMain } from 'electron'
 
 export function handleModules (modules: Array<Distress>) {
   ipcMain.handle('modules:getAllVersions', async (_e, moduleName: ModuleName) => {
-    const module = modules.find(m => m.name === moduleName)
+    const module = modules.find((candidate) => candidate.name === moduleName)
     if (!module) {
       throw new Error(`Module ${moduleName} not found`)
     }
@@ -13,18 +13,26 @@ export function handleModules (modules: Array<Distress>) {
   })
 
   ipcMain.handle('modules:installVersion', async (_e, moduleName: ModuleName, versionTag: string) => {
-    const module = modules.find(m => m.name === moduleName)
+    const module = modules.find((candidate) => candidate.name === moduleName)
     if (!module) {
       throw new Error(`Module ${moduleName} not found`)
     }
 
     for await (const progress of module.installVersion(versionTag)) {
-      _e.sender.send('modules:installProgress', moduleName, versionTag, progress)
+      if (_e.sender.isDestroyed()) {
+        return
+      }
+      try {
+        _e.sender.send('modules:installProgress', moduleName, versionTag, progress)
+      } catch (error) {
+        console.warn('[modules] Failed to send install progress', error)
+        return
+      }
     }
   })
 
   ipcMain.handle('modules:uninstallVersion', async (_e, moduleName: ModuleName, versionTag: string) => {
-    const module = modules.find(m => m.name === moduleName)
+    const module = modules.find((candidate) => candidate.name === moduleName)
     if (!module) {
       throw new Error(`Module ${moduleName} not found`)
     }
@@ -33,7 +41,7 @@ export function handleModules (modules: Array<Distress>) {
   })
 
   ipcMain.handle('modules:getConfig', async (_e: IpcMainInvokeEvent, moduleName: ModuleName) => {
-    const module = modules.find(m => m.name === moduleName)
+    const module = modules.find((candidate) => candidate.name === moduleName)
     if (!module) {
       throw new Error(`Module ${moduleName} not found`)
     }
@@ -42,7 +50,7 @@ export function handleModules (modules: Array<Distress>) {
   })
 
   ipcMain.handle('modules:setConfig', async (_e, moduleName: ModuleName, config: DistressConfig) => {
-    const module = modules.find(m => m.name === moduleName)
+    const module = modules.find((candidate) => candidate.name === moduleName)
     if (!module) {
       throw new Error(`Module ${moduleName} not found`)
     }
