@@ -1,9 +1,8 @@
-import { app, BrowserWindow, dialog, nativeTheme } from 'electron'
+import { app, BrowserWindow, nativeTheme } from 'electron'
 import type { App } from 'electron'
 import path from 'path'
 import os from 'os'
 import fs from 'fs'
-import { execFileSync } from 'child_process'
 import { fileURLToPath } from 'url'
 
 import { handle } from './handlers'
@@ -34,7 +33,6 @@ try {
 
 let mainWindow: BrowserWindow | undefined
 let isRecoveringRenderer = false
-let hasShownRuntimeWarning = false
 let isQuitting = false
 
 function logMainProcessEvent (level: 'info' | 'warn' | 'error', origin: string, details?: unknown) {
@@ -74,57 +72,6 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason) => {
   logMainProcessEvent('error', 'unhandledRejection', reason)
 })
-
-function getRequiredRuntimeRegistryKey () {
-  if (platform !== 'win32') {
-    return null
-  }
-
-  return 'HKLM\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86'
-}
-
-function isRequiredWindowsRuntimeInstalled () {
-  const registryKey = getRequiredRuntimeRegistryKey()
-  if (!registryKey) {
-    return true
-  }
-
-  try {
-    const output = execFileSync('reg', ['query', registryKey, '/v', 'Installed'], {
-      windowsHide: true,
-      encoding: 'utf8'
-    })
-
-    return /Installed\s+REG_DWORD\s+0x1/i.test(output)
-  } catch (error) {
-    logMainProcessEvent('warn', 'runtime-registry-check-failed', { registryKey, error })
-    return true
-  }
-}
-
-async function checkWindowsRuntimePrerequisite () {
-  if (platform !== 'win32') {
-    return
-  }
-
-  const installed = isRequiredWindowsRuntimeInstalled()
-  logMainProcessEvent(installed ? 'info' : 'warn', installed ? 'runtime-check-passed' : 'runtime-check-missing', {
-    arch: process.arch,
-    runtime: 'x86'
-  })
-
-  if (installed || hasShownRuntimeWarning) {
-    return
-  }
-
-  hasShownRuntimeWarning = true
-  await dialog.showMessageBox({
-    type: 'warning',
-    title: 'Microsoft Visual C++ Redistributable may be missing',
-    message: 'ITArmyKit detected that the required Microsoft Visual C++ x86 runtime may be missing.',
-    detail: 'The app was installed, but Distress or other native-dependent parts may fail to start. If you see startup errors, install the Microsoft Visual C++ x86 Redistributable and restart ITArmyKit.'
-  })
-}
 
 function createWindow () {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -275,7 +222,6 @@ if (!app.requestSingleInstanceLock()) {
     logMainProcessEvent('info', 'app-ready')
     try {
       createWindow()
-      await checkWindowsRuntimePrerequisite()
     } catch (error) {
       logMainProcessEvent('error', 'createWindow failed', error)
     }

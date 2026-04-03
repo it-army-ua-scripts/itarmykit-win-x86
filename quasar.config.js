@@ -10,7 +10,6 @@
 
 const { configure } = require('quasar/wrappers')
 const path = require('path')
-const fs = require('fs')
 
 module.exports = configure(function (/* ctx */) {
   return {
@@ -223,14 +222,6 @@ module.exports = configure(function (/* ctx */) {
           deleteAppDataOnUninstall: true,
           include: 'build/installer.nsh'
         },
-        extraResources: fs.existsSync(path.resolve(__dirname, 'VC_redist.x86.exe'))
-          ? [
-              {
-                from: 'VC_redist.x86.exe',
-                to: 'VC_redist.x86.exe'
-              }
-            ]
-          : [],
         // eslint-disable-next-line no-template-curly-in-string
         artifactName: '${name}-${os}-${arch}.${ext}',
         appId: 'itarmykit_x86',
