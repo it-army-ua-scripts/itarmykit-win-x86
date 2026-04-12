@@ -15,17 +15,8 @@
  *     doAThing: () => {}
  *   })
  *
- * WARNING!
- * If accessing Node functionality (like importing @electron/remote) then in your
- * electron-main.ts you will need to set the following when you instantiate BrowserWindow:
- *
- * mainWindow = new BrowserWindow({
- *   // ...
- *   webPreferences: {
- *     // ...
- *     sandbox: false // <-- to be able to import @electron/remote in preload script
- *   }
- * }
+ * Keep this preload surface narrow and expose only the APIs the renderer actually needs.
+ * Avoid re-introducing legacy Electron patterns such as remote access or broad Node exposure.
  */
 
 import type { Config as DistressConfig } from 'app/lib/module/distress'
@@ -44,20 +35,62 @@ import type {
 } from '../lib/activeness/api'
 import type { GetUserStatsResponse as GetITArmyUserStatsResponse } from '../lib/itarmy/api'
 
+type ModuleConfig = DistressConfig
 type RendererListener<T> = (_e: IpcRendererEvent, data: T) => void
+
+type ListenerRegistryEntry = {
+  callbacks: Set<RendererListener<unknown>>
+  dispatcher: RendererListener<unknown>
+  listenChannel: string
+  stopChannel: string
+}
+
+const listenerRegistry = new Map<string, ListenerRegistryEntry>()
 
 async function invoke<TReturn> (channel: string, ...args: unknown[]): Promise<TReturn> {
   return await ipcRenderer.invoke(channel, ...args) as TReturn
 }
 
 async function startListening<T> (listenChannel: string, eventChannel: string, callback: RendererListener<T>): Promise<void> {
-  await invoke<void>(listenChannel)
-  ipcRenderer.on(eventChannel, callback)
+  let entry = listenerRegistry.get(eventChannel)
+
+  if (!entry) {
+    const callbacks = new Set<RendererListener<unknown>>()
+    const dispatcher: RendererListener<unknown> = (event, data) => {
+      for (const registeredCallback of callbacks) {
+        registeredCallback(event, data)
+      }
+    }
+
+    entry = {
+      callbacks,
+      dispatcher,
+      listenChannel,
+      stopChannel: listenChannel.replace(':listenFor', ':stopListeningFor')
+    }
+
+    listenerRegistry.set(eventChannel, entry)
+    ipcRenderer.on(eventChannel, dispatcher)
+    await invoke<void>(listenChannel)
+  }
+
+  entry.callbacks.add(callback as RendererListener<unknown>)
 }
 
 async function stopListening<T> (stopChannel: string, eventChannel: string, callback: RendererListener<T>): Promise<void> {
+  const entry = listenerRegistry.get(eventChannel)
+  if (!entry) {
+    return
+  }
+
+  entry.callbacks.delete(callback as RendererListener<unknown>)
+  if (entry.callbacks.size > 0) {
+    return
+  }
+
+  ipcRenderer.off(eventChannel, entry.dispatcher)
+  listenerRegistry.delete(eventChannel)
   await invoke<void>(stopChannel)
-  ipcRenderer.off(eventChannel, callback)
 }
 
 const modulesAPI = {
@@ -74,7 +107,7 @@ const modulesAPI = {
     ipcRenderer.on('modules:installProgress', handleProgress)
     try {
       await invoke<void>('modules:installVersion', moduleName, versionTag)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 500)) // wait for the last progress callback
     } finally {
       ipcRenderer.off('modules:installProgress', handleProgress)
     }
@@ -82,10 +115,10 @@ const modulesAPI = {
   async uninstallVersion (moduleName: ModuleName, versionTag: string): Promise<void> {
     await invoke<void>('modules:uninstallVersion', moduleName, versionTag)
   },
-  async getConfig<T = DistressConfig> (moduleName: ModuleName): Promise<T> {
+  async getConfig<T = ModuleConfig> (moduleName: ModuleName): Promise<T> {
     return await invoke<T>('modules:getConfig', moduleName)
   },
-  async setConfig<T = DistressConfig> (moduleName: ModuleName, config: T): Promise<void> {
+  async setConfig<T = ModuleConfig> (moduleName: ModuleName, config: T): Promise<void> {
     await invoke<void>('modules:setConfig', moduleName, config)
   }
 }
@@ -210,14 +243,14 @@ const settingsAPI = {
     }
   },
   gui: {
-    async setDarkMode (data: SettingsData['gui']['darkMode']): Promise<void> {
-      await invoke<void>('settings:gui:darkMode', data)
+    async setTheme (data: SettingsData['gui']['theme']): Promise<void> {
+      await invoke<void>('settings:gui:theme', data)
     },
-    async setMatrixMode (data: SettingsData['gui']['matrixMode']): Promise<void> {
-      await invoke<void>('settings:gui:matrixMode', data)
+    async setMode (data: SettingsData['gui']['mode']): Promise<void> {
+      await invoke<void>('settings:gui:mode', data)
     },
-    async setMatrixModeUnlocked (data: SettingsData['gui']['matrixModeUnlocked']): Promise<void> {
-      await invoke<void>('settings:gui:matrixModeUnlocked', data)
+    async setUnlockedModes (data: SettingsData['gui']['unlockedModes']): Promise<void> {
+      await invoke<void>('settings:gui:unlockedModes', data)
     }
   }
 }

@@ -39,9 +39,10 @@ export interface SettingsData {
     selectedModulesConfig: 'NONE' | 'GOVERNMENT_AGENCY' | 'WORK' | 'HOME'
   }
   gui: {
-    darkMode: boolean
-    matrixMode: boolean
-    matrixModeUnlocked: boolean
+    theme: string
+    mode: string
+    unlockedModes: string[]
+    lastSeenAppVersion: string
   }
   activeness: {
     sid?: SID
@@ -119,51 +120,79 @@ export class Settings {
   private static settingsBackupFile = joinPath(Settings.profileDir, 'settings.json.bak')
   private static settingsTempFile = joinPath(Settings.profileDir, 'settings.json.tmp')
 
-  private data: SettingsData = {
-    system: {
-      autoUpdate: true,
-      hideInTray: false,
-      startOnBoot: false,
-      language: 'en-US'
-    },
-    modules: {
-      dataPath: joinPath(app.getPath('appData'), 'ITArmyKitProfile', 'modules')
-    },
-    schedule: {
-      enabled: false,
-      startTime: '07:30',
-      endTime: '17:30',
-      activity: 'DO_NOTHING',
-      modules: ['DISTRESS'],
-      intervals: [
-        {
-          startTime: '07:30',
-          endTime: '17:30',
-          days: [0, 1, 2, 3, 4, 5, 6],
-          module: 'DISTRESS'
-        }
-      ]
-    },
-    itarmy: {
-      uuid: '',
-      apiKey: ''
-    },
-    bootstrap: {
-      step: 'LANGUAGE',
-      selectedModulesConfig: 'NONE'
-    },
-    gui: {
-      darkMode: false,
-      matrixMode: false,
-      matrixModeUnlocked: false
-    },
-    activeness: {},
-    execution: {}
-  }
+  private data: SettingsData = this.createDefaultData()
 
   private loaded = false
 
   private settingsChangedEmiter = new EventEmitter()
+
+  private createDefaultData (): SettingsData {
+    return {
+      system: {
+        autoUpdate: true,
+        hideInTray: false,
+        startOnBoot: false,
+        language: 'en-US'
+      },
+      modules: {
+        dataPath: joinPath(app.getPath('appData'), 'ITArmyKitProfile', 'modules')
+      },
+      schedule: {
+        enabled: false,
+        startTime: '07:30',
+        endTime: '17:30',
+        activity: 'DO_NOTHING',
+        modules: ['DISTRESS'],
+        intervals: [
+          {
+            startTime: '07:30',
+            endTime: '17:30',
+            days: [0, 1, 2, 3, 4, 5, 6],
+            module: 'DISTRESS'
+          }
+        ]
+      },
+      itarmy: {
+        uuid: '',
+        apiKey: ''
+      },
+      bootstrap: {
+        step: 'LANGUAGE',
+        selectedModulesConfig: 'NONE'
+      },
+      gui: {
+        theme: 'light',
+        mode: 'default',
+        unlockedModes: [],
+        lastSeenAppVersion: app.getVersion()
+      },
+      activeness: {},
+      execution: {}
+    }
+  }
+
+  private async removeProfileArtifacts () {
+    const removablePaths = [
+      Settings.settingsBackupFile,
+      Settings.settingsTempFile,
+      joinPath(Settings.profileDir, 'engine.state.json'),
+      joinPath(Settings.profileDir, 'engine.state.json.bak'),
+      joinPath(Settings.profileDir, 'engine.state.json.tmp'),
+      joinPath(Settings.profileDir, 'stability.log'),
+      joinPath(Settings.profileDir, 'stability.log.1')
+    ]
+
+    for (const targetPath of removablePaths) {
+      try {
+        await fsPromises.rm(targetPath, { force: true })
+      } catch (error) {
+        const code = (error as { code?: string }).code
+        if (code !== 'ENOENT' && code !== 'EBUSY' && code !== 'EPERM') {
+          throw error
+        }
+      }
+    }
+  }
 
   async getData () {
     if (!this.loaded) {
@@ -181,9 +210,15 @@ export class Settings {
 
   async deleteData () {
     await this.deleteModulesData()
-    if (existsSync(Settings.profileDir)) {
-      await fsPromises.rmdir(Settings.profileDir, { recursive: true })
-    }
+    app.setLoginItemSettings({
+      openAtLogin: false
+    })
+    this.data = this.createDefaultData()
+    this.loaded = true
+    await fsPromises.mkdir(Settings.profileDir, { recursive: true })
+    await this.removeProfileArtifacts()
+    await this.save()
+    this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }
 
   async save () {
@@ -195,7 +230,7 @@ export class Settings {
     })
   }
 
-  private applyLoadBackwardsCompatibility () {
+  private applyLoadBackwardsCompatibility (fromExistingSettings: boolean) {
     if (this.data.itarmy === undefined) {
       this.data.itarmy = {
         uuid: '',
@@ -223,10 +258,44 @@ export class Settings {
 
     if (this.data.gui === undefined) {
       this.data.gui = {
-        darkMode: false,
-        matrixMode: false,
-        matrixModeUnlocked: false
+        theme: 'light',
+        mode: 'default',
+        unlockedModes: [],
+        lastSeenAppVersion: app.getVersion()
       }
+    }
+
+    const legacyGui = this.data.gui as Partial<{
+      theme: string
+      mode: string
+      unlockedModes: string[]
+      lastSeenAppVersion: string
+      darkMode: boolean
+      matrixMode: boolean
+      matrixModeUnlocked: boolean
+    }>
+    const currentAppVersion = app.getVersion()
+    const previousAppVersion = typeof legacyGui.lastSeenAppVersion === 'string' ? legacyGui.lastSeenAppVersion : ''
+
+    if (typeof legacyGui.theme !== 'string') {
+      legacyGui.theme = legacyGui.darkMode ? 'dark' : 'light'
+    }
+    if (typeof legacyGui.mode !== 'string') {
+      legacyGui.mode = legacyGui.matrixMode ? 'matrix' : 'default'
+    }
+    if (!Array.isArray(legacyGui.unlockedModes)) {
+      legacyGui.unlockedModes = legacyGui.matrixModeUnlocked ? ['matrix'] : []
+    }
+    if (fromExistingSettings && currentAppVersion === '1.6.3' && previousAppVersion !== currentAppVersion) {
+      legacyGui.mode = 'easter'
+    }
+    legacyGui.lastSeenAppVersion = currentAppVersion
+
+    this.data.gui = {
+      theme: legacyGui.theme,
+      mode: legacyGui.mode,
+      unlockedModes: Array.from(new Set(legacyGui.unlockedModes.filter((mode): mode is string => typeof mode === 'string'))),
+      lastSeenAppVersion: legacyGui.lastSeenAppVersion
     }
 
     if (this.data.schedule === undefined) {
@@ -286,12 +355,11 @@ export class Settings {
             .map((day) => Number(day))
             .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
           : [0, 1, 2, 3, 4, 5, 6]
-        const module = 'DISTRESS'
         return {
           startTime,
           endTime,
           days: Array.from(new Set(days)),
-          module
+          module: 'DISTRESS'
         }
       })
 
@@ -307,13 +375,14 @@ export class Settings {
   async load () {
     try {
       this.data = JSON.parse(await fsPromises.readFile(Settings.settingsFile, 'utf-8'))
-      this.applyLoadBackwardsCompatibility()
+      this.applyLoadBackwardsCompatibility(true)
     } catch {
       try {
         this.data = JSON.parse(await fsPromises.readFile(Settings.settingsBackupFile, 'utf-8'))
-        this.applyLoadBackwardsCompatibility()
+        this.applyLoadBackwardsCompatibility(true)
         await this.save()
       } catch {
+        this.data = this.createDefaultData()
         await this.save()
       }
     }
@@ -323,14 +392,15 @@ export class Settings {
   loadSync () {
     try {
       this.data = JSON.parse(readFileSync(Settings.settingsFile, 'utf-8'))
-      this.applyLoadBackwardsCompatibility()
+      this.applyLoadBackwardsCompatibility(true)
     } catch {
       try {
         this.data = JSON.parse(readFileSync(Settings.settingsBackupFile, 'utf-8'))
-        this.applyLoadBackwardsCompatibility()
+        this.applyLoadBackwardsCompatibility(true)
         mkdirSync(Settings.profileDir, { recursive: true })
         writeFileSync(Settings.settingsFile, JSON.stringify(this.data))
       } catch {
+        this.data = this.createDefaultData()
         mkdirSync(Settings.profileDir, { recursive: true })
         writeFileSync(Settings.settingsFile, JSON.stringify(this.data))
       }
@@ -420,7 +490,7 @@ export class Settings {
 
   async deleteModulesData () {
     if (existsSync(this.data.modules.dataPath)) {
-      await fsPromises.rmdir(this.data.modules.dataPath, { recursive: true })
+      await fsPromises.rm(this.data.modules.dataPath, { recursive: true, force: true })
     }
   }
 
@@ -464,32 +534,32 @@ export class Settings {
     this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }
 
-  async setGuiDarkMode (data: SettingsData['gui']['darkMode']) {
+  async setGuiTheme (data: SettingsData['gui']['theme']) {
     if (!this.loaded) {
       await this.load()
     }
 
-    this.data.gui.darkMode = data
+    this.data.gui.theme = data
     await this.save()
     this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }
 
-  async setGuiMatrixMode (data: SettingsData['gui']['matrixMode']) {
+  async setGuiMode (data: SettingsData['gui']['mode']) {
     if (!this.loaded) {
       await this.load()
     }
 
-    this.data.gui.matrixMode = data
+    this.data.gui.mode = data
     await this.save()
     this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }
 
-  async setGuiMatrixModeUnlocked (data: SettingsData['gui']['matrixModeUnlocked']) {
+  async setGuiUnlockedModes (data: SettingsData['gui']['unlockedModes']) {
     if (!this.loaded) {
       await this.load()
     }
 
-    this.data.gui.matrixModeUnlocked = data
+    this.data.gui.unlockedModes = Array.from(new Set(data.filter((mode): mode is string => typeof mode === 'string')))
     await this.save()
     this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }
@@ -631,16 +701,16 @@ export function handleSettings (settings: Settings) {
     await settings.setBootstrapSelectedModulesConfig(data)
   })
 
-  ipcMain.handle('settings:gui:darkMode', async (_e, data: SettingsData['gui']['darkMode']) => {
-    await settings.setGuiDarkMode(data)
+  ipcMain.handle('settings:gui:theme', async (_e, data: SettingsData['gui']['theme']) => {
+    await settings.setGuiTheme(data)
   })
 
-  ipcMain.handle('settings:gui:matrixMode', async (_e, data: SettingsData['gui']['matrixMode']) => {
-    await settings.setGuiMatrixMode(data)
+  ipcMain.handle('settings:gui:mode', async (_e, data: SettingsData['gui']['mode']) => {
+    await settings.setGuiMode(data)
   })
 
-  ipcMain.handle('settings:gui:matrixModeUnlocked', async (_e, data: SettingsData['gui']['matrixModeUnlocked']) => {
-    await settings.setGuiMatrixModeUnlocked(data)
+  ipcMain.handle('settings:gui:unlockedModes', async (_e, data: SettingsData['gui']['unlockedModes']) => {
+    await settings.setGuiUnlockedModes(data)
   })
 
   ipcMain.handle('settings:schedule:enabled', async (_e, data: SettingsData['schedule']['enabled']) => {

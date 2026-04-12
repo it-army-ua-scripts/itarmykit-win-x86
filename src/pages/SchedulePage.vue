@@ -337,6 +337,8 @@ onMounted(async () => {
   width: 100%;
   max-width: 1080px;
   border-radius: 14px;
+  background: var(--app-soft-surface);
+  border-color: var(--app-soft-border);
 }
 
 .schedule-header {
@@ -347,7 +349,7 @@ onMounted(async () => {
 }
 
 .schedule-toggle {
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--app-soft-border);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex;
@@ -358,8 +360,8 @@ onMounted(async () => {
 
 .interval-card {
   border-radius: 12px;
-  border-color: rgba(148, 163, 184, 0.35);
-  background: rgba(148, 163, 184, 0.04);
+  border-color: var(--app-soft-border);
+  background: color-mix(in srgb, var(--app-soft-surface) 90%, transparent);
 }
 
 .day-pills {
@@ -370,5 +372,17 @@ onMounted(async () => {
 
 .add-interval-btn {
   width: 100%;
+}
+
+.schedule-page :deep(.q-field__control),
+.schedule-page :deep(.q-time__content),
+.schedule-page :deep(.q-time) {
+  background: var(--app-soft-surface);
+}
+
+.schedule-page :deep(.q-field__label),
+.schedule-page :deep(.q-chip),
+.schedule-page :deep(.q-btn) {
+  color: inherit;
 }
 </style>
