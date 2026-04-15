@@ -46,6 +46,7 @@ export interface SettingsData {
   }
   activeness: {
     sid?: SID
+    score: number
   }
   execution: {
     moduleToRun?: 'DISTRESS'
@@ -166,7 +167,9 @@ export class Settings {
         unlockedModes: [],
         lastSeenAppVersion: app.getVersion()
       },
-      activeness: {},
+      activeness: {
+        score: 0
+      },
       execution: {}
     }
   }
@@ -355,16 +358,23 @@ export class Settings {
             .map((day) => Number(day))
             .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
           : [0, 1, 2, 3, 4, 5, 6]
+        const module = 'DISTRESS'
         return {
           startTime,
           endTime,
           days: Array.from(new Set(days)),
-          module: 'DISTRESS'
+          module
         }
       })
 
     if (this.data.activeness === undefined) {
-      this.data.activeness = {}
+      this.data.activeness = {
+        score: 0
+      }
+    }
+
+    if (typeof this.data.activeness.score !== 'number' || Number.isNaN(this.data.activeness.score)) {
+      this.data.activeness.score = 0
     }
 
     if (this.data.execution === undefined) {
@@ -574,6 +584,16 @@ export class Settings {
     } else {
       this.data.activeness.sid = data
     }
+    await this.save()
+    this.settingsChangedEmiter.emit('settingsChanged', this.data)
+  }
+
+  async setActivenessScore (data: SettingsData['activeness']['score']) {
+    if (!this.loaded) {
+      await this.load()
+    }
+
+    this.data.activeness.score = Math.max(0, data)
     await this.save()
     this.settingsChangedEmiter.emit('settingsChanged', this.data)
   }

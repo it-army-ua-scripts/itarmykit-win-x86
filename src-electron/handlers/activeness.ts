@@ -1,38 +1,46 @@
 import { ipcMain } from 'electron'
 
 import { ActivenessClient } from '../../lib/activeness/client'
+import { FetchLike, LoginResponse } from '../../lib/activeness/api'
+import { electronNetFetch } from '../../lib/utils/electronNet'
 import { Settings } from './settings'
+
+const activenessFetch: FetchLike = async (input) => await electronNetFetch(input)
 
 class ActivenessHandler {
   readonly client: ActivenessClient
   protected settings: Settings
 
   constructor (settings: Settings) {
-    this.client = new ActivenessClient()
+    this.client = new ActivenessClient(activenessFetch)
     this.settings = settings
   }
 
   async tryLoginFromSettings (): Promise<boolean> {
-    const sid = this.settings.getDataSync().activeness.sid
+    const activenessSettings = this.settings.getDataSync().activeness
+    const sid = activenessSettings.sid
     if (sid !== undefined) {
+      this.client.score = activenessSettings.score
       return await this.client.loginWithSID(sid)
     }
 
     return false
   }
 
-  async login (email: string, password: string): Promise<boolean> {
-    const success = await this.client.login(email, password)
+  async login (email: string, password: string): Promise<LoginResponse> {
+    const response = await this.client.login(email, password)
 
-    if (success) {
+    if (response.status === 'ok') {
       await this.settings.setActivenessSID(this.client.sid)
+      await this.settings.setActivenessScore(this.client.score)
     }
 
-    return success
+    return response
   }
 
   async logout () {
     await this.settings.setActivenessSID(undefined)
+    await this.settings.setActivenessScore(0)
     this.client.logout()
   }
 }
@@ -45,7 +53,7 @@ export function handleActiveness (settings: Settings) {
   ipcMain.handle('activeness:isLoggedIn', async () => {
     return handler.client.isLoggedIn
   })
-  ipcMain.handle('activeness:login', async (event, email: string, password: string) => {
+  ipcMain.handle('activeness:login', async (_event, email: string, password: string) => {
     return await handler.login(email, password)
   })
   ipcMain.handle('activeness:logout', async () => {
@@ -61,12 +69,25 @@ export function handleActiveness (settings: Settings) {
     return response
   })
 
-  ipcMain.handle('activeness:makeTaskDone', async (event, taskId: number) => {
-    return await handler.client.makeTaskDone(taskId)
+  ipcMain.handle('activeness:makeTaskDone', async (_event, taskId: number) => {
+    const response = await handler.client.makeTaskDone(taskId)
+    if (response.status === 'ok') {
+      await settings.setActivenessScore(handler.client.score)
+    }
+    if (response.status === 'sidcheckfail' || response.status === 'sidexpired') {
+      await handler.logout()
+    }
+
+    return response
   })
 
-  ipcMain.handle('activeness:ignoreTask', async (event, taskId: number) => {
-    return await handler.client.ignoreTask(taskId)
+  ipcMain.handle('activeness:ignoreTask', async (_event, taskId: number) => {
+    const response = await handler.client.ignoreTask(taskId)
+    if (response.status === 'sidcheckfail' || response.status === 'sidexpired') {
+      await handler.logout()
+    }
+
+    return response
   })
 
   ipcMain.handle('activeness:getStats', async () => {

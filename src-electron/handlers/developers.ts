@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import fetch from 'electron-fetch'
+import { electronNetFetch } from '../../lib/utils/electronNet'
 
 export interface Contributor {
     login: string
@@ -28,7 +28,7 @@ let contributorsCacheTime: Date | null = null
 
 async function fetchContributors (repo: string): Promise<Contributor[]> {
   try {
-    const response = await fetch(`https://api.github.com/repos/${repo}/contributors?per_page=100`)
+    const response = await electronNetFetch(`https://api.github.com/repos/${repo}/contributors?per_page=100`)
     if (response.status !== 200) {
       console.warn(`[developers] Failed to load contributors for ${repo}. Status: ${response.status}`)
       return []
@@ -88,7 +88,7 @@ async function getContributors (): Promise<Contributor[]> {
   if (contributorsCache !== null && contributorsCacheTime !== null) {
     const now = new Date()
     const diff = now.getTime() - contributorsCacheTime.getTime()
-    if (diff < 1000 * 60 * 60 * 1) { // 1 hour
+    if (diff < 1000 * 60 * 60 * 1) {
       return contributorsCache
     }
   }

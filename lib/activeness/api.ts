@@ -1,10 +1,12 @@
-import fetch, { RequestInit } from 'electron-fetch'
-
 const BASE_URL = 'https://activeness.social/api'
-const BASE_REQUEST_OPTIONS: RequestInit = {
-  timeout: 10000, // 10 seconds
-  size: 1024 * 1024 * 10 // 10MB
+
+export interface FetchResponseLike {
+  status: number
+  text: () => Promise<string>
+  json: <T = unknown>() => Promise<T>
 }
+
+export type FetchLike = (input: string) => Promise<FetchResponseLike>
 
 export type SID = string
 
@@ -24,9 +26,9 @@ export interface NegativeLoginResponse {
 }
 export type LoginResponse = PositiveLoginResponse | NegativeLoginResponse
 
-export async function login (params: LoginRequest): Promise<LoginResponse> {
+export async function login (params: LoginRequest, fetchImpl: FetchLike = fetch): Promise<LoginResponse> {
   try {
-    const loginResponse = await fetch(`${BASE_URL}/?job=auth&ver=1&email=${encodeURI(params.email)}&psw=${encodeURI(params.password)}`, BASE_REQUEST_OPTIONS)
+    const loginResponse = await fetchImpl(`${BASE_URL}/?job=auth&ver=1&email=${encodeURI(params.email)}&psw=${encodeURI(params.password)}`)
     if (loginResponse.status !== 200) {
       return {
         status: 'err',
@@ -40,7 +42,7 @@ export async function login (params: LoginRequest): Promise<LoginResponse> {
       return {
         status: 'err',
         errorType: 'ERR_FROM_BACKEND',
-        errorMessage: ''
+        errorMessage: responseJSON.status
       }
     }
 
@@ -75,9 +77,9 @@ export interface GetTasksListNegativeResponse {
 }
 export type GetTasksListResponse = GetTasksListPositiveResponse | GetTasksListNegativeResponse
 
-export async function getTasksList (params: GetTasksListRequest): Promise<GetTasksListResponse> {
+export async function getTasksList (params: GetTasksListRequest, fetchImpl: FetchLike = fetch): Promise<GetTasksListResponse> {
   try {
-    const tasksListResponse = await fetch(`${BASE_URL}/?job=list&sid=${encodeURI(params.sid)}`, BASE_REQUEST_OPTIONS)
+    const tasksListResponse = await fetchImpl(`${BASE_URL}/?job=list&sid=${encodeURI(params.sid)}`)
     if (tasksListResponse.status !== 200) {
       return {
         status: 'err',
@@ -123,15 +125,15 @@ export interface MakeTaskDonePositiveResponse {
     status: 'ok'
 }
 export interface MakeTaskDoneNegativeResponse {
-    status: 'err' | 'sidexpired' | 'sidcheckfail'
+    status: 'err' | 'sidexpired' | 'sidcheckfail' | 'clicktoofast' | 'id_check_fails' | `err#${string}`
     errorType: 'BAD_STATUS_CODE' | 'ERR_FROM_BACKEND' | 'REQUEST_FAILED'
     errorMessage: string
 }
 export type MakeTaskDoneResponse = MakeTaskDonePositiveResponse | MakeTaskDoneNegativeResponse
 
-export async function makeTaskDone (params: MakeTaskDoneRequest): Promise<MakeTaskDoneResponse> {
+export async function makeTaskDone (params: MakeTaskDoneRequest, fetchImpl: FetchLike = fetch): Promise<MakeTaskDoneResponse> {
   try {
-    const taskDoneResponse = await fetch(`${BASE_URL}/?job=done&sid=${encodeURI(params.sid)}&id=${encodeURI(String(params.id))}`, BASE_REQUEST_OPTIONS)
+    const taskDoneResponse = await fetchImpl(`${BASE_URL}/?job=done&sid=${encodeURI(params.sid)}&id=${encodeURI(String(params.id))}`)
     if (taskDoneResponse.status !== 200) {
       return {
         status: 'err',
@@ -142,13 +144,19 @@ export async function makeTaskDone (params: MakeTaskDoneRequest): Promise<MakeTa
 
     const responseJSON = await taskDoneResponse.json() as MakeTaskDoneResponse
     if (responseJSON.status !== 'ok') {
-      let message = 'Unknown error'
+      let message = responseJSON.status
       switch (responseJSON.status) {
         case 'sidexpired':
           message = 'SID expired'
           break
         case 'sidcheckfail':
           message = 'SID doesnt belong to login/account'
+          break
+        case 'clicktoofast':
+          message = 'You are clicking too fast'
+          break
+        case 'id_check_fails':
+          message = 'Task id is invalid'
           break
       }
 
@@ -177,15 +185,15 @@ export interface IgnoreTaskPositiveResponse {
     status: 'ok'
 }
 export interface IgnoreTaskNegativeResponse {
-    status: 'err' | 'sidexpired' | 'sidcheckfail'
+    status: 'err' | 'sidexpired' | 'sidcheckfail' | 'id_check_fails' | `err#${string}`
     errorType: 'BAD_STATUS_CODE' | 'ERR_FROM_BACKEND' | 'REQUEST_FAILED'
     errorMessage: string
 }
 export type IgnoreTaskResponse = IgnoreTaskPositiveResponse | IgnoreTaskNegativeResponse
 
-export async function ignoreTask (params: IgnoreTaskRequest): Promise<IgnoreTaskResponse> {
+export async function ignoreTask (params: IgnoreTaskRequest, fetchImpl: FetchLike = fetch): Promise<IgnoreTaskResponse> {
   try {
-    const ignoreTaskResponse = await fetch(`${BASE_URL}/?job=ignore&sid=${encodeURI(params.sid)}&id=${encodeURI(String(params.id))}`, BASE_REQUEST_OPTIONS)
+    const ignoreTaskResponse = await fetchImpl(`${BASE_URL}/?job=ignore&sid=${encodeURI(params.sid)}&id=${encodeURI(String(params.id))}`)
     if (ignoreTaskResponse.status !== 200) {
       return {
         status: 'err',
@@ -196,13 +204,16 @@ export async function ignoreTask (params: IgnoreTaskRequest): Promise<IgnoreTask
 
     const responseJSON = await ignoreTaskResponse.json() as IgnoreTaskResponse
     if (responseJSON.status !== 'ok') {
-      let message = 'Unknown error'
+      let message = responseJSON.status
       switch (responseJSON.status) {
         case 'sidexpired':
           message = 'SID expired'
           break
         case 'sidcheckfail':
           message = 'SID doesnt belong to login/account'
+          break
+        case 'id_check_fails':
+          message = 'Task id is invalid'
           break
       }
 
@@ -242,9 +253,9 @@ export interface GetStatsNegativeResponse {
 }
 export type GetStatsResponse = GetStatsPositiveResponse | GetStatsNegativeResponse
 
-export async function getStats (): Promise<GetStatsResponse> {
+export async function getStats (fetchImpl: FetchLike = fetch): Promise<GetStatsResponse> {
   try {
-    const statsResponse = await fetch(`${BASE_URL}/?job=stats`, BASE_REQUEST_OPTIONS)
+    const statsResponse = await fetchImpl(`${BASE_URL}/?job=stats`)
     if (statsResponse.status !== 200) {
       return {
         status: 'err',
